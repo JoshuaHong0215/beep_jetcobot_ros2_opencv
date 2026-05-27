@@ -18,7 +18,15 @@ class JointControlNode(Node):
 
     def timer_callback(self):
         msg = JointState()
-        msg.data = [
+        msg.name = [
+            'joint1',
+            'joint2',
+            'joint3',
+            'joint4',
+            'joint5',
+            'joint6']
+        
+        msg.position = [
             0.0, 
             0.0, 
             0.0, 
