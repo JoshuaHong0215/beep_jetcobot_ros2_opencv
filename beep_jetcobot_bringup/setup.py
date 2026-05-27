@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'joint_control = beep_jetcobot_bringup.joint_control:main',
         ],
     },
 )

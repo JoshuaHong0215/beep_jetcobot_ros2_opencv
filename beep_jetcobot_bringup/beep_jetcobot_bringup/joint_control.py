@@ -13,13 +13,39 @@ class JointControlNode(Node):
             10
             )
         
-    
+        self.timer = self.create_timer(0.1, self.timer_callback)
+        self.get_logger().info('jetcobot 관절 제어 노드가 켜졌습니다')
+
     def timer_callback(self):
-        pass
+        msg = Float32MultiArray()
+        msg.data = [
+            0.0, 
+            0.0, 
+            0.0, 
+            0.0, 
+            0.0, 
+            0.0
+            ]
+        
+        self.joint_pub.publish(msg)
 
 
 
 def main(args=None):
     rp.init(args=args)
+    node = JointControlNode()
+
+    try:
+        rp.spin(node)
+
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rp.shutdown()
+
+
+if __name__ == '__main__':
+    main()
 
 
