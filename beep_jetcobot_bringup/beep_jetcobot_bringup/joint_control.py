@@ -1,6 +1,6 @@
 import rclpy as rp
 from rclpy.node import Node
-from std_msgs.msg import Float32MultiArray
+from sensor_msgs.msg import JointState
 
 class JointControlNode(Node):
     def __init__(self):
@@ -8,8 +8,8 @@ class JointControlNode(Node):
         super().__init__('joint_control_node')
 
         self.joint_pub = self.create_publisher(
-            Float32MultiArray, 
-            '/mycobot/joint_states_cmd', 
+            JointState,
+            'joint_states', 
             10
             )
         
@@ -17,7 +17,7 @@ class JointControlNode(Node):
         self.get_logger().info('jetcobot 관절 제어 노드가 켜졌습니다')
 
     def timer_callback(self):
-        msg = Float32MultiArray()
+        msg = JointState()
         msg.data = [
             0.0, 
             0.0, 
