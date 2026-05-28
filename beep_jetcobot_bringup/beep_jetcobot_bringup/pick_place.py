@@ -15,8 +15,9 @@ class PickPlaceNode(Node):
 
         
         self.home_angles = [0, 0, 0, 0, 0, 0]
-        self.pick_coords = [150.0, 0.0, 100.0, -180.0, 0.0, 90.0]
-        self.place_coords = [0.0, 150.0, 100.0, -180.0, 0.0, 90.0]
+        self.pick_coords = [150.0, 0.0, 120.0, -180.0, 0.0, 90.0]
+        self.middle_coords = [150.0, 60.0, 200.0, -180.0, 0.0, 90.0]
+        self.place_coords = [0.0, 150.0, 120.0, -180.0, 0.0, 90.0]
 
         self.get_logger().info('pick_place_node 시작')
         self.run()
@@ -54,6 +55,8 @@ class PickPlaceNode(Node):
 
         self.move_to(self.pick_coords, 'pick')
         self.close_gripper()
+
+        self.move_to(self.middle_coords, 'middle')
 
         # place
         self.move_to(self.place_coords, 'place')
