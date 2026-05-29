@@ -36,9 +36,8 @@ class ArucoDetectorNode(Node):
             self.get_logger().error('카메라를 열 수 없습니다')
             return
 
-        self.aruco_dict = aruco.getPredefinedDictionary(ARUCO_DICT)
-        self.aruco_params = aruco.DetectorParameters()
-        self.detector = aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
+        self.aruco_dict = aruco.Dictionary_get(ARUCO_DICT)
+        self.aruco_params = aruco.DetectorParameters_create()
 
         flask_thread = threading.Thread(
             target=lambda: flask_app.run(host='0.0.0.0', port=FLASK_PORT, threaded=True),
@@ -57,7 +56,7 @@ class ArucoDetectorNode(Node):
             return
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        corners, ids, _ = self.detector.detectMarkers(gray)
+        corners, ids, _ = aruco.detectMarkers(gray, self.aruco_dict, parameters=self.aruco_params)
 
         if ids is not None:
             aruco.drawDetectedMarkers(frame, corners, ids)
