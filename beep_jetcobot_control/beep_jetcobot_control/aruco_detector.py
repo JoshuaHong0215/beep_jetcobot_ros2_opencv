@@ -6,7 +6,7 @@ import cv2.aruco as aruco
 from flask import Flask, Response
 
 
-ARUCO_DICT = aruco.DICT_6X6_250
+ARUCO_DICT = aruco.DICT_4X4_250
 FLASK_PORT = 5000
 
 _latest_frame = None

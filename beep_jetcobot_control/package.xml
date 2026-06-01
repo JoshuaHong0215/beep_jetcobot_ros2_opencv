@@ -1,14 +1,16 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>beep_jetcobot_bringup</name>
+  <name>beep_jetcobot_control</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>JetCobot control and vision nodes</description>
   <maintainer email="sebin5736@gmail.com">jetcobot</maintainer>
   <license>TODO: License declaration</license>
 
   <depend>rclpy</depend>
-  <exec_depend>beep_jetcobot_control</exec_depend>
+  <depend>sensor_msgs</depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-flask</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
