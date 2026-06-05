@@ -43,6 +43,12 @@ class JointControlNode(Node):
             'joint_states', 
             10
             )
+
+        self.ee_pub = self.create_publisher(
+            Float32MultiArray,
+            '/ee_coords',
+            10
+        )
         
         self.timer = self.create_timer(0.1, self.timer_callback)
         self.get_logger().info('jetcobot 관절 제어 노드가 켜졌습니다')
@@ -65,6 +71,13 @@ class JointControlNode(Node):
         else:
             return
         self.joint_pub.publish(msg)
+
+
+        coords = self.mc.get_coords()
+        if coords and len(coords) == 6:
+            coord_msg = Float32MultiArray()
+            coord_msg.data = [float(v) for v in coords]
+            self.ee_pub.publish(coord_msg)
 
 
 

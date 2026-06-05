@@ -1,82 +1,118 @@
 import threading
+import socket
 import rclpy
 from rclpy.node import Node
 import cv2
 import cv2.aruco as aruco
-from flask import Flask, Response
 import yaml
-# Float32MultiArray: 여러 개의 float 값을 하나의 메시지로 묶어 topic으로 보낼 수 있는 ROS2 표준 타입
-from std_msgs.msg import Float32MultiArray
 from ament_index_python.packages import get_package_share_directory
+from scipy.spatial.transform import Rotation
 import os
 import numpy as np
 
+from std_msgs.msg import Float32MultiArray
 
-ARUCO_DICT = aruco.DICT_4X4_250
-FLASK_PORT = 5000
 
+ARUCO_DICT = aruco.DICT_6X6_250
+UDP_PORT   = 9998
+
+_cap_lock     = threading.Lock()
+_clients      = set()
+_clients_lock = threading.Lock()
 _latest_frame = None
-_frame_lock = threading.Lock()
-
-flask_app = Flask(__name__)
+_frame_lock   = threading.Lock()
 
 
-@flask_app.route('/stream')
-def stream():
-    def generate():
-        while True:
-            with _frame_lock:
-                frame = _latest_frame
-            if frame is None:
-                continue
-            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+def client_listener():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(('0.0.0.0', UDP_PORT))
+    while True:
+        _, addr = sock.recvfrom(16)
+        with _clients_lock:
+            _clients.add(addr[0])
+        print(f'클라이언트 등록: {addr[0]}')
+
+
+def preview_loop(cap):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1 << 20)
+
+    aruco_dict   = aruco.Dictionary_get(ARUCO_DICT)
+    aruco_params = aruco.DetectorParameters_create()
+
+    while True:
+        with _cap_lock:
+            ret, frame = cap.read()
+        if not ret:
+            continue
+
+        small = cv2.resize(frame, (320, 240))
+        gray  = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
+        corners, ids, _ = aruco.detectMarkers(gray, aruco_dict, parameters=aruco_params)
+
+        if ids is not None:
+            aruco.drawDetectedMarkers(small, corners, ids)
+            cv2.putText(small, f'DETECTED id={ids.flatten()[0]}', (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        else:
+            cv2.putText(small, 'NOT DETECTED', (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+
+        _, buf = cv2.imencode('.jpg', small, [cv2.IMWRITE_JPEG_QUALITY, 40])
+        data = buf.tobytes()
+
+        with _clients_lock:
+            for ip in list(_clients):
+                try:
+                    sock.sendto(data, (ip, UDP_PORT))
+                except Exception:
+                    pass
 
 
 class ArucoDetectorNode(Node):
     def __init__(self):
         super().__init__('aruco_detector_node')
 
-        # 패키지 경로를 기반으로 켈리브레이션 yaml파일의 절대경로를 구성함
         config_path = os.path.join(
             get_package_share_directory('beep_jetcobot_control'),
             'config', 'camera_cali.yaml'
         )
-        # yaml파일을 읽어 카메라 고유 파라미터(내부 행렬 및 왜곡 계수) 로드
         with open(config_path, 'r') as f:
             calib = yaml.safe_load(f)
 
-        # 로드한 데이터를 추후 pose estimation(3D위치 추정)에 사용할 수 있도록 numpy배열로 변홤
-        # self.K = 카메라 내부 행렬(초점거리 및 광학 중심 정보를 포함한 3x3 행렬)
-        # self.D = 렌즈 왜곡 계수(방사형 및 접선 왜곡 보정용 벡터)
         self.K = np.array(calib['camera_matrix']['data']).reshape(3, 3)
-        self.D = np.array(calib['distortion_coefficients']['data']) 
-        
+        self.D = np.array(calib['distortion_coefficients']['data'])
 
+        # TCP → 카메라 렌즈 중심 오프셋 (단위: m, 실측값)
+        # X: 60mm, Y: 0 (정중앙), Z: 30mm (카메라가 TCP 위)
+        self.t_cam2ee = np.array([[0.060], [0.000], [0.030]])
+        self.R_cam2ee = np.eye(3)
+
+        self.ee_coords = None
+        self.create_subscription(Float32MultiArray, '/ee_coords', self.ee_coords_cb, 10)
+
+        self.marker_pub = self.create_publisher(Float32MultiArray, '/marker_coord', 10)
 
         self.cap = cv2.VideoCapture('/dev/jetcocam0')
         if not self.cap.isOpened():
             self.get_logger().error('카메라를 열 수 없습니다')
             return
 
-        self.aruco_dict = aruco.Dictionary_get(ARUCO_DICT)
+        self.aruco_dict   = aruco.Dictionary_get(ARUCO_DICT)
         self.aruco_params = aruco.DetectorParameters_create()
 
-        flask_thread = threading.Thread(
-            target=lambda: flask_app.run(host='0.0.0.0', port=FLASK_PORT, threaded=True),
-            daemon=True
-        )
-        flask_thread.start()
-
-        # 마커의 3D 좌표(x,y,z) + 고정 접근각도(rx,ry,rz) 6개 값을 pick_place에게 보내는 publisher
-        self.marker_pub = self.create_publisher(Float32MultiArray, '/marker_coord', 10)
+        threading.Thread(target=client_listener, daemon=True).start()
+        threading.Thread(target=preview_loop, args=(self.cap,), daemon=True).start()
 
         self.timer = self.create_timer(0.03, self.detect)
-        self.get_logger().info(f'aruco_detector_node 시작 — 스트림: http://0.0.0.0:{FLASK_PORT}/stream')
+        self.get_logger().info(f'aruco_detector_node 시작 — 로컬PC: python view_udp.py <로봇IP>')
+
+    def ee_coords_cb(self, msg):
+        self.ee_coords = list(msg.data)
 
     def detect(self):
-        global _latest_frame
-        ret, frame = self.cap.read()
+        with _cap_lock:
+            ret, frame = self.cap.read()
         if not ret:
             self.get_logger().warn('프레임을 읽을 수 없습니다')
             return
@@ -84,45 +120,42 @@ class ArucoDetectorNode(Node):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, _ = aruco.detectMarkers(gray, self.aruco_dict, parameters=self.aruco_params)
 
-        if ids is not None:
-            aruco.drawDetectedMarkers(frame, corners, ids)
-            for i, marker_id in enumerate(ids.flatten()):
-                cx = int(corners[i][0][:, 0].mean())
-                cy = int(corners[i][0][:, 1].mean())
-                self.get_logger().info(f'마커 ID: {marker_id} | 중심: ({cx}, {cy})')
+        if ids is None:
+            return
 
-        _, buf = cv2.imencode('.jpg', frame)
-        with _frame_lock:
-            _latest_frame = buf.tobytes()
+        rvecs, tvecs, _ = aruco.estimatePoseSingleMarkers(
+            corners, 0.030, self.K, self.D
+        )
 
+        for i, marker_id in enumerate(ids.flatten()):
+            tvec = tvecs[i][0]
 
-        if ids is not None:
-            # 카메라 행렬(K)과 왜곡 계소(D)를 사용하여 마커의 3D자세( 위치 및 회전)를 추정
-            # 0.025는 켈리브레이션 체커보드의 한 칸, 한 변의 길이
-            rvecs, tvecs, _ = aruco.estimatePoseSingleMarkers(
-                corners, 0.025, self.K, self.D  # 0.05 = 마커 실제 크기(m)
+            self.get_logger().info(
+                f'ID: {marker_id} | 카메라 기준 x={tvec[0]:.3f} y={tvec[1]:.3f} z={tvec[2]:.3f} (m)'
             )
-            # 검출된 각 마커의 ID별로 로봇이 이해할 수 있는 좌표(x, y, z) 정보 로깅
-            for i, marker_id in enumerate(ids.flatten()):
-                # tvec[i]는 카메라 중심으로부터 마커 중심까지의 [x, y, z] 이동 벡터
-                tvec = tvecs[i][0]  # x, y, z (미터)
 
-                # tvec은 미터 단위 → MyCobot은 mm 단위를 사용하므로 *1000 변환
-                # 뒤 세 값(-180, 0, 90)은 로봇의 접근 각도(rx, ry, rz) 고정값
-                msg = Float32MultiArray()
-                msg.data = [
-                    tvec[0] * 1000,
-                    tvec[1] * 1000,
-                    tvec[2] * 1000,
-                    -180.0, 0.0, 90.0
-                ]
-                # /marker_coord topic으로 6개 값 전송 → pick_place가 subscribe해서 사용
-                self.marker_pub.publish(msg)
+            if self.ee_coords is None:
+                self.get_logger().warn('EE 좌표 미수신 — 변환 스킵')
+                continue
 
-                self.get_logger().info(
-                    f'ID: {marker_id} | x={tvec[0]*1000:.1f} y={tvec[1]*1000:.1f} z={tvec[2]*1000:.1f} (mm)'
-                )
+            x, y, z, rx, ry, rz = self.ee_coords
+            R_base_ee = Rotation.from_euler('ZYX', [rz, ry, rx], degrees=True).as_matrix()
+            t_base_ee = np.array([x, y, z]).reshape(3, 1) / 1000.0
 
+            p_cam  = tvec.reshape(3, 1)
+            p_ee   = self.R_cam2ee @ p_cam + self.t_cam2ee
+            p_base = (R_base_ee @ p_ee + t_base_ee).flatten() * 1000.0
+
+            msg = Float32MultiArray()
+            msg.data = [
+                float(p_base[0]), float(p_base[1]), float(p_base[2]),
+                -180.0, 0.0, 90.0
+            ]
+            self.marker_pub.publish(msg)
+
+            self.get_logger().info(
+                f'ID: {marker_id} | 베이스 기준 x={p_base[0]:.1f} y={p_base[1]:.1f} z={p_base[2]:.1f} mm'
+            )
 
     def destroy_node(self):
         self.cap.release()

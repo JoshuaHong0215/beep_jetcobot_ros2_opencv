@@ -13,11 +13,14 @@ class PickPlaceNode(Node):
 
         # 동작 정의
         self.speed = 30
-        self.home_angles = [0, 0, 0, 0, 0, 0]
-        # pick_coords: aruco_detector에서 받아온 마커 좌표로 덮어씌워짐 → 초기값은 None
-        self.pick_coords = None
+        self.home_angles   = [0, 0, 0, 0, 0, 0]
+        self.ready_coords  = [129.1, -62.8, 317.1, -162.04, -18.67, -42.35]
+        self.pick_coords   = None
         self.middle_coords = [150.0, 60.0, 200.0, -180.0, 0.0, 90.0]
-        self.place_coords = [0.0, 150.0, 120.0, -180.0, 0.0, 90.0]
+        self.place_coords  = [0.0, 150.0, 120.0, -180.0, 0.0, 90.0]
+
+        self.PICK_Z     = 105.8   # 실측: 그리퍼가 물체에 닿는 TCP z (mm)
+        self.APPROACH_Z = 200.0   # pick 전 접근 높이 (mm)
 
         # 명령
         self.joint_pub = self.create_publisher(Float32MultiArray, '/joint_command', 10)
@@ -57,6 +60,11 @@ class PickPlaceNode(Node):
         self.send_angles(self.home_angles)
         time.sleep(3)
 
+    def go_ready(self):
+        self.get_logger().info('레디포즈 이동')
+        self.send_coords(self.ready_coords)
+        time.sleep(3)
+
     # gripper open
     # 숫자가 클수록 열고 작을수록 닫음
     def open_gripper(self):
@@ -77,23 +85,34 @@ class PickPlaceNode(Node):
 
     # 동작 전체 구현
     def run(self):
-        # pick_coords가 None이면 aruco_detector에서 마커 좌표가 아직 안 온 것
-        # spin_once: ROS2 이벤트를 한 번 처리 → 콜백이 실행될 기회를 줌
-        # 마커 좌표가 들어올 때까지 반복 대기
+        time.sleep(1.0)  # DDS publisher 연결 대기
+        self.get_logger().info('--- Pick and place start ---')
+
+        self.open_gripper()
+
+        # 레디포즈로 이동 후 마커 감지 대기
+        self.go_ready()
+
+        # 레디포즈 도착 후 이전에 수신된 좌표 초기화 → 새로 감지된 것만 사용
+        self.pick_coords = None
+        self.get_logger().info('레디포즈 대기 중 — 마커 감지 기다리는 중...')
         while self.pick_coords is None:
             rclpy.spin_once(self, timeout_sec=0.1)
 
-        self.get_logger().info('--- Pick and place start ---')
+        self.get_logger().info(f'마커 감지 완료 → pick 좌표: {self.pick_coords}')
 
-        self.go_home()
-        self.open_gripper()
+        # x, y만 마커에서 사용, z는 실측값 고정
+        rx, ry, rz = self.pick_coords[3], self.pick_coords[4], self.pick_coords[5]
 
-        self.move_to(self.pick_coords, 'pick')
+        approach_coords = [self.pick_coords[0], self.pick_coords[1], self.APPROACH_Z, rx, ry, rz]
+        self.move_to(approach_coords, 'approach')
+
+        pick_coords = [self.pick_coords[0], self.pick_coords[1], self.PICK_Z, rx, ry, rz]
+        self.move_to(pick_coords, 'pick')
         self.close_gripper()
 
         self.move_to(self.middle_coords, 'middle')
 
-        # place
         self.move_to(self.place_coords, 'place')
         self.open_gripper()
 
