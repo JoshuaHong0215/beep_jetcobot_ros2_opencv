@@ -37,6 +37,7 @@ setup(
             'handeye_tf_publisher = beep_jetcobot_control.handeye_tf_publisher:main',
             'pick_place_tf = beep_jetcobot_control.pick_place_tf:main',
             'pick_place_ver2 = beep_jetcobot_control.pick_place_ver2:main',
+            'pick_place_action_server = beep_jetcobot_control.pick_place_action_server:main',
         ],
     },
 )

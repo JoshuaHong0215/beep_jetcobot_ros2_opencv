@@ -28,8 +28,14 @@ def generate_launch_description():
         ),
         Node(
             package='beep_jetcobot_control',
-            executable='handeye_tf_publisher',
-            name='handeye_tf_publisher',
+            executable='contour_detector',
+            name='contour_detector',
+            output='screen',
+        ),
+        Node(
+            package='beep_jetcobot_control',
+            executable='pick_place_action_server',
+            name='pick_place_action_server',
             output='screen',
         ),
     ])

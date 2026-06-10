@@ -161,7 +161,7 @@ class ContourDetectorNode(Node):
 
         self.timer = self.create_timer(0.05, self.detect)
         self.get_logger().info('contour_detector_node 시작')
-
+ 
     def detect(self):
         with _frame_lock:
             if _latest_frame is None:

@@ -1,0 +1,12 @@
+# Goal
+string task_id
+---
+# Result
+bool success
+string message
+---
+# Feedback
+string state
+float32 e_x
+float32 e_y
+int32 iteration
