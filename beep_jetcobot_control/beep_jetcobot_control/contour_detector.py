@@ -11,23 +11,23 @@ from std_msgs.msg import Float32MultiArray
 
 UDP_PORT = 9998
 
-_latest_frame = None
-_frame_lock   = threading.Lock()
-_clients      = set()
-_clients_lock = threading.Lock()
+_latest_frame  = None
+_frame_lock    = threading.Lock()
+_latest_result = None  # detect()가 쓰고 camera_loop()가 읽음
+_result_lock   = threading.Lock()
+_clients       = set()
+_clients_lock  = threading.Lock()
 
-# 밝은 물체면 False, 어두운 물체면 True
 DARK_OBJECT = True
 
-MIN_AREA     = 500   # 노이즈 제거용 최소 contour 면적 (픽셀²)
-MIN_SOLIDITY = 0.75  # 볼록껍질 대비 실제 면적 비율 — 상자는 높음
-MIN_EXTENT   = 0.50  # bounding rect 대비 면적 비율 — 상자는 높음
+MIN_AREA     = 500
+MIN_SOLIDITY = 0.75
+MIN_EXTENT   = 0.50
 
 _morph_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
 
 
 def _binarize(gray):
-    """Adaptive threshold + 모폴로지로 조명 불균일에 강인한 이진화."""
     thresh = cv2.adaptiveThreshold(
         gray, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -40,21 +40,16 @@ def _binarize(gray):
     return thresh
 
 
-def _pick_best_contour(contours, scale=1):
-    """
-    면적 · solidity · extent 기준으로 상자에 가장 가까운 컨투어 반환.
-    scale: 픽셀 크기 보정 계수 (프리뷰 축소 이미지면 1, 원본이면 원본/프리뷰 비율)
-    """
-    min_area = MIN_AREA * (scale ** 2)
+def _pick_best_contour(contours):
     best = None
     best_area = 0
 
     for c in contours:
         area = cv2.contourArea(c)
-        if area < min_area:
+        if area < MIN_AREA:
             continue
 
-        hull     = cv2.convexHull(c)
+        hull      = cv2.convexHull(c)
         hull_area = cv2.contourArea(hull)
         solidity  = area / hull_area if hull_area > 0 else 0
         if solidity < MIN_SOLIDITY:
@@ -94,23 +89,16 @@ def camera_loop(cap):
         with _frame_lock:
             _latest_frame = frame.copy()
 
-        # UDP 프리뷰
-        small  = cv2.resize(frame, (320, 240))
-        gray   = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
-        gray   = cv2.GaussianBlur(gray, (5, 5), 0)
-        thresh = _binarize(gray)
+        small = cv2.resize(frame, (320, 240))
 
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        c = _pick_best_contour(contours, scale=1)
-        if c is not None:
-            M = cv2.moments(c)
-            if M['m00'] > 0:
-                cx = int(M['m10'] / M['m00'])
-                cy = int(M['m01'] / M['m00'])
-                cv2.drawContours(small, [c], -1, (0, 255, 0), 2)
-                cv2.circle(small, (cx, cy), 5, (0, 255, 0), -1)
-                cv2.putText(small, 'DETECTED', (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        with _result_lock:
+            result = _latest_result
+
+        if result is not None:
+            cv2.drawContours(small, [result['contour']], -1, (0, 255, 0), 2)
+            cv2.circle(small, (result['cx'], result['cy']), 5, (0, 255, 0), -1)
+            cv2.putText(small, 'DETECTED', (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         else:
             cv2.putText(small, 'NOT DETECTED', (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
@@ -139,16 +127,16 @@ class ContourDetectorNode(Node):
             calib = yaml.safe_load(f)
 
         K = np.array(calib['camera_matrix']['data']).reshape(3, 3)
-        self.K = K
-        # detect()에서 320x240으로 리사이즈하므로 내부 파라미터 0.5배 보정
-        self.fx = K[0, 0] * 0.5
-        self.fy = K[1, 1] * 0.5
-        self.cx = K[0, 2] * 0.5
-        self.cy = K[1, 2] * 0.5
+        # 320x240 해상도에 맞게 스케일 조정
+        self.K_half = np.array([
+            [K[0, 0] * 0.5, 0.0,           K[0, 2] * 0.5],
+            [0.0,           K[1, 1] * 0.5, K[1, 2] * 0.5],
+            [0.0,           0.0,           1.0           ]
+        ])
         self.dist_coeffs = np.array(calib['distortion_coefficients']['data'])
 
-        self.error_pub = self.create_publisher(Float32MultiArray, '/marker_error', 10)
-        self._miss_count = 0
+        self.error_pub    = self.create_publisher(Float32MultiArray, '/marker_error', 10)
+        self._miss_count  = 0
         self._MISS_THRESH = 5
 
         self.cap = cv2.VideoCapture('/dev/jetcocam0')
@@ -161,26 +149,29 @@ class ContourDetectorNode(Node):
 
         self.timer = self.create_timer(0.05, self.detect)
         self.get_logger().info('contour_detector_node 시작')
- 
+
     def detect(self):
+        global _latest_result
+
         with _frame_lock:
             if _latest_frame is None:
                 return
             frame = _latest_frame.copy()
 
-        frame  = cv2.undistort(frame, self.K, self.dist_coeffs)
         small  = cv2.resize(frame, (320, 240))
         gray   = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
         gray   = cv2.GaussianBlur(gray, (5, 5), 0)
         thresh = _binarize(gray)
 
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        c = _pick_best_contour(contours)
 
         msg = Float32MultiArray()
-        c   = _pick_best_contour(contours, scale=1)
 
         if c is None:
             self._miss_count += 1
+            with _result_lock:
+                _latest_result = None
             if self._miss_count >= self._MISS_THRESH:
                 msg.data = [0.0, 0.0, 0.0]
                 self.error_pub.publish(msg)
@@ -194,10 +185,16 @@ class ContourDetectorNode(Node):
         u = M['m10'] / M['m00']
         v = M['m01'] / M['m00']
 
-        e_x = (u - self.cx) / self.fx
-        e_y = (v - self.cy) / self.fy
+        # 중점 좌표만 왜곡 보정 → 정규화 좌표(e_x, e_y) 직접 반환
+        pt   = np.array([[[u, v]]], dtype=np.float32)
+        norm = cv2.undistortPoints(pt, self.K_half, self.dist_coeffs)
+        e_x  = float(norm[0][0][0])
+        e_y  = float(norm[0][0][1])
 
-        msg.data = [float(e_x), float(e_y), 1.0]
+        with _result_lock:
+            _latest_result = {'contour': c, 'cx': int(u), 'cy': int(v)}
+
+        msg.data = [e_x, e_y, 1.0]
         self.error_pub.publish(msg)
         self.get_logger().info(f'물체 | 픽셀({u:.0f},{v:.0f}) | e_x={e_x:.4f} e_y={e_y:.4f}')
 

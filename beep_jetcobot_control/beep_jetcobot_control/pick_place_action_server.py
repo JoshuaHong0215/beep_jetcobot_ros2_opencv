@@ -8,16 +8,17 @@ import time
 
 from beep_jetcobot_msgs.action import PickPlace
 
-LAMBDA    = 0.3
-THRESHOLD = 0.05
-MAX_ITER  = 150
-MAX_DELTA = 15.0
+LAMBDA         = 0.3
+THRESHOLD      = 0.08
+MAX_ITER       = 150
+MAX_DELTA      = 8.0
+CONVERGE_COUNT = 3
 
-PICK_Z    = 117.1
+PICK_Z    = 130.1
 LIFT_Z    = 317.1
 
-CAM_TCP_X = 90.0
-CAM_TCP_Y = 0.0
+CAM_TCP_X = 122.0
+CAM_TCP_Y = -20.0
 
 
 class PickPlaceActionServer(Node):
@@ -25,7 +26,7 @@ class PickPlaceActionServer(Node):
         super().__init__('pick_place_action_server')
 
         self.home_angles  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        self.ready_coords = [129.1, -62.8, 317.1, -162.04, -18.67, -42.35]
+        self.ready_coords = [40, -62.8, 317.1, -162.04, -18.67, -42.35]
         self.speed        = 30
 
         self.marker_error = None
@@ -119,9 +120,10 @@ class PickPlaceActionServer(Node):
 
     def open_gripper(self):
         self.send_gripper(100)
-        time.sleep(1)
+        time.sleep(2)
 
     def visual_servo(self, goal_handle):
+        consec = 0
         for i in range(MAX_ITER):
             if goal_handle.is_cancel_requested:
                 return False
@@ -129,15 +131,22 @@ class PickPlaceActionServer(Node):
             error = self.get_fresh_error()
             if error is None:
                 self.publish_feedback(goal_handle, 'SEARCHING', iteration=i)
+                consec = 0
                 continue
 
             e_x, e_y, _ = error
             self.publish_feedback(goal_handle, 'SERVO', e_x, e_y, i)
-            self.get_logger().info(f'[{i}] e_x={e_x:.4f}  e_y={e_y:.4f}')
+            self.get_logger().info(f'[{i}] e_x={e_x:.4f}  e_y={e_y:.4f}  consec={consec}')
 
             if abs(e_x) < THRESHOLD and abs(e_y) < THRESHOLD:
-                self.get_logger().info('수렴 완료')
-                return True
+                consec += 1
+                if consec >= CONVERGE_COUNT:
+                    self.get_logger().info('수렴 완료')
+                    time.sleep(1.0)
+                    return True
+                continue
+
+            consec = 0
 
             if self.ee_coords is None:
                 continue

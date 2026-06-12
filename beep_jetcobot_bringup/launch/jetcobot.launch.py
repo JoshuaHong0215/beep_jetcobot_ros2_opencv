@@ -28,8 +28,8 @@ def generate_launch_description():
         ),
         Node(
             package='beep_jetcobot_control',
-            executable='contour_detector',
-            name='contour_detector',
+            executable='yolo_detector',
+            name='yolo_detector',
             output='screen',
         ),
         Node(
