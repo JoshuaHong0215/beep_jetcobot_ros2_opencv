@@ -102,15 +102,11 @@ class JointControlNode(Node):
     def servo_command_cb(self, msg):
         coords = list(msg.data)
         if len(coords) == 6:
-            self.mc.send_coords(coords, self.speed, 1)
+            self.mc.send_coords(coords, self.speed, 0)
 
 
     def gripper_command_cb(self, msg):
         self.mc.set_gripper_value(msg.data, self.speed)
-
-    def destroy_node(self):
-        self.mc.stop()
-        super().destroy_node()
 
 
 

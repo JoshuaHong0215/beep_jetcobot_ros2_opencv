@@ -4,35 +4,28 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from std_msgs.msg import Float32MultiArray, Int32
-from sensor_msgs.msg import JointState
-import math
 import time
 
 from beep_jetcobot_msgs.action import PickPlace
 
-# visual servo: e_x, e_y는 yolo_detector가 publish하는 픽셀 단위.
-# LAMBDA는 mm/픽셀 게인 (1픽셀당 robot이 몇 mm 움직일지).
-# THRESHOLD는 픽셀 단위 수렴 기준.
-LAMBDA    = 0.15   # mm/pixel
-THRESHOLD = 16.0   # pixel
-MAX_ITER  = 100
-MAX_DELTA = 8.0    # mm/iter
+LAMBDA         = 0.3
+THRESHOLD      = 0.08
+MAX_ITER       = 150
+MAX_DELTA      = 8.0
+CONVERGE_COUNT = 3
 
-PICK_Z = 130.1
-LIFT_Z = 317.1
+PICK_Z    = 130.1
+LIFT_Z    = 317.1
 
-CAM_TCP_X = 30
-CAM_TCP_Y = 0.0
+CAM_TCP_X = 122.0
+CAM_TCP_Y = -20.0
 
-# DESCEND를 angle delta로 처리. TCP_ALIGN 후 캡처한 각도에 더할 값(도).
-# 실제 측정해서 튜닝 필요: J2 어깨 앞으로, J3 팔꿈치 굽힘, J5 손목 보상.
-DELTA_J2_DESCEND = -40.0
-DELTA_J3_DESCEND = 0.0
-DELTA_J4_DESCEND = 50.0
-DELTA_J5_DESCEND = 10.0
-
-TASK_CLASS = {'0': 0, '1': 1, '2': 2}
-CLASS_NAME = {0: 'large_blue_box', 1: 'medium_red_box', 2: 'small_yellow_box'}
+# task_id 문자열 → class_id 매핑
+TASK_CLASS = {
+    '0': 0,  # large_blue_box
+    '1': 1,  # medium_red_box
+    '2': 2,  # small_yellow_box
+}
 
 
 class PickPlaceActionServer(Node):
@@ -40,12 +33,11 @@ class PickPlaceActionServer(Node):
         super().__init__('pick_place_action_server')
 
         self.home_angles  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        self.ready_coords = [129.1, -62.8, 317.1, -162.04, -18.67, -42.35]
+        self.ready_coords = [40, -62.8, 317.1, -162.04, -18.67, -42.35]
         self.speed        = 30
 
-        self.marker_error  = None
-        self.ee_coords     = None
-        self.current_angles = None  # /joint_states에서 받은 deg 단위 6개 각도
+        self.marker_error = None
+        self.ee_coords    = None
 
         cb = ReentrantCallbackGroup()
 
@@ -57,7 +49,6 @@ class PickPlaceActionServer(Node):
 
         self.create_subscription(Float32MultiArray, '/marker_error', self.marker_error_cb, 10, callback_group=cb)
         self.create_subscription(Float32MultiArray, '/ee_coords',    self.ee_coords_cb,    10, callback_group=cb)
-        self.create_subscription(JointState,        '/joint_states', self.joint_state_cb,  10, callback_group=cb)
 
         self._action_server = ActionServer(
             self,
@@ -76,11 +67,6 @@ class PickPlaceActionServer(Node):
 
     def ee_coords_cb(self, msg):
         self.ee_coords = list(msg.data)
-
-    def joint_state_cb(self, msg):
-        # joint_control이 rad로 publish → deg로 변환
-        if len(msg.position) == 6:
-            self.current_angles = [math.degrees(p) for p in msg.position]
 
     def goal_cb(self, goal_request):
         self.get_logger().info(f'Goal 수신: task_id={goal_request.task_id}')
@@ -110,11 +96,6 @@ class PickPlaceActionServer(Node):
         msg = Int32()
         msg.data = value
         self.gripper_pub.publish(msg)
-
-    def set_target_class(self, class_id):
-        msg = Int32()
-        msg.data = class_id
-        self.target_class_pub.publish(msg)
 
     # ── helpers ──────────────────────────────────────────────────
     def get_fresh_error(self):
@@ -150,6 +131,7 @@ class PickPlaceActionServer(Node):
         time.sleep(2)
 
     def visual_servo(self, goal_handle):
+        consec = 0
         for i in range(MAX_ITER):
             if goal_handle.is_cancel_requested:
                 return False
@@ -157,85 +139,68 @@ class PickPlaceActionServer(Node):
             error = self.get_fresh_error()
             if error is None:
                 self.publish_feedback(goal_handle, 'SEARCHING', iteration=i)
+                consec = 0
                 continue
 
             e_x, e_y, _ = error
             self.publish_feedback(goal_handle, 'SERVO', e_x, e_y, i)
-            self.get_logger().info(f'[{i}] e_x={e_x:.4f}  e_y={e_y:.4f}')
+            self.get_logger().info(f'[{i}] e_x={e_x:.4f}  e_y={e_y:.4f}  consec={consec}')
 
             if abs(e_x) < THRESHOLD and abs(e_y) < THRESHOLD:
-                self.get_logger().info('교차 완료')
-                return True
-
-            coords = self.ee_coords
-            if coords is None:
+                consec += 1
+                if consec >= CONVERGE_COUNT:
+                    self.get_logger().info('수렴 완료')
+                    time.sleep(1.0)
+                    return True
                 continue
 
-            cur_x, cur_y, cur_z = coords[0], coords[1], coords[2]
-            rx, ry, rz          = coords[3], coords[4], coords[5]
+            consec = 0
 
-            # 픽셀 → mm 직접 변환. 축 매핑: Robot +X ↔ e_y, Robot +Y ↔ e_x (카메라 ~90° 회전).
-            delta_x = max(-MAX_DELTA, min(MAX_DELTA, -LAMBDA * e_y))
-            delta_y = max(-MAX_DELTA, min(MAX_DELTA, -LAMBDA * e_x))
+            if self.ee_coords is None:
+                continue
 
-            self.get_logger().info(
-                f'  → delta=({delta_x:+.2f}, {delta_y:+.2f}) mm  cur=({cur_x:.1f}, {cur_y:.1f})'
-            )
+            cur_x, cur_y, cur_z = self.ee_coords[0], self.ee_coords[1], self.ee_coords[2]
+            rx, ry, rz = self.ee_coords[3], self.ee_coords[4], self.ee_coords[5]
+
+            delta_x = max(-MAX_DELTA, min(MAX_DELTA, -LAMBDA * e_y * 1000.0))
+            delta_y = max(-MAX_DELTA, min(MAX_DELTA, -LAMBDA * e_x * 1000.0))
+
             self.send_servo_coords([cur_x + delta_x, cur_y + delta_y, cur_z, rx, ry, rz])
             time.sleep(0.5)
 
         return False
 
     def pick(self, goal_handle):
-        coords = self.ee_coords
-        if coords is None:
+        if self.ee_coords is None:
             return False
 
-        x  = coords[0] + CAM_TCP_X
-        y  = coords[1] + CAM_TCP_Y
-        z  = coords[2]
-        rx, ry, rz = coords[3], coords[4], coords[5]
+        x = self.ee_coords[0] + CAM_TCP_X
+        y = self.ee_coords[1] + CAM_TCP_Y
+        z = self.ee_coords[2]
+        rx, ry, rz = self.ee_coords[3], self.ee_coords[4], self.ee_coords[5]
 
-        # TCP_ALIGN: XY만 평행이동 (ready z 유지)
-        self.publish_feedback(goal_handle, 'TCP_ALIGN')
-        self.get_logger().info(f'>>> TCP_ALIGN: ({x:.1f}, {y:.1f}, {z:.1f})')
-        self.send_servo_coords([x, y, z, rx, ry, rz])
+        self.publish_feedback(goal_handle, 'OFFSET_MOVE')
+        self.send_coords([x, y, z, rx, ry, rz])
+        time.sleep(2)
+
+        self.publish_feedback(goal_handle, 'DESCENDING')
+        self.send_coords([x, y, PICK_Z, rx, ry, rz])
         time.sleep(3)
 
-        # TCP_ALIGN 후 각도 캡처 → angle delta로 하강
-        above = self.current_angles
-        if above is None or len(above) != 6:
-            self.get_logger().error('current_angles 없음 — DESCEND 중단')
-            return False
-        above = list(above)
-        self.get_logger().info(f'>>> ABOVE angles (TCP_ALIGN 직후): {[f"{a:.2f}" for a in above]}')
-
-        # [디버그] DESCEND 직전 임시 정지: 각도 캡처용. 캡처 끝나면 아래 두 줄 제거.
-        self.get_logger().warn('DESCEND 스킵 (디버그 모드)')
-        return True
-
-        descend = list(above)
-        descend[1] += DELTA_J2_DESCEND
-        descend[2] += DELTA_J3_DESCEND
-        descend[3] += DELTA_J4_DESCEND
-        descend[4] += DELTA_J5_DESCEND
-
-        self.publish_feedback(goal_handle, 'DESCEND')
-        self.get_logger().info(f'>>> DESCEND angles: {[f"{a:.1f}" for a in descend]}')
-        self.send_angles(descend)
-        time.sleep(3)
-
-        self.publish_feedback(goal_handle, 'GRIP')
+        self.publish_feedback(goal_handle, 'GRIPPING')
         self.send_gripper(0)
         time.sleep(1.5)
 
-        # LIFT: TCP_ALIGN 직후 각도로 복귀
-        self.publish_feedback(goal_handle, 'LIFT')
-        self.get_logger().info(f'>>> LIFT angles: {[f"{a:.1f}" for a in above]}')
-        self.send_angles(above)
+        self.publish_feedback(goal_handle, 'LIFTING')
+        self.send_coords([x, y, LIFT_Z, rx, ry, rz])
         time.sleep(3)
 
         return True
+
+    def set_target_class(self, class_id):
+        msg      = Int32()
+        msg.data = class_id
+        self.target_class_pub.publish(msg)
 
     # ── execute ──────────────────────────────────────────────────
     def execute_cb(self, goal_handle):
@@ -244,7 +209,7 @@ class PickPlaceActionServer(Node):
 
         task_id    = goal_handle.request.task_id
         class_id   = TASK_CLASS.get(task_id, -1)
-        class_name = CLASS_NAME.get(class_id, '알 수 없음')
+        class_name = {0: 'large_blue_box', 1: 'medium_red_box', 2: 'small_yellow_box'}.get(class_id, '알 수 없음')
 
         if class_id == -1:
             self.get_logger().error(f'유효하지 않은 task_id: {task_id}')
@@ -266,18 +231,16 @@ class PickPlaceActionServer(Node):
         if not converged:
             self.publish_feedback(goal_handle, 'SERVO_FAILED')
             self.go_home()
-            self.set_target_class(-1)
             result.success = False
             result.message = '시각 서보 수렴 실패'
             goal_handle.abort()
             return result
 
-        time.sleep(0.5)  # 교차 후 정지
         success = self.pick(goal_handle)
         self.publish_feedback(goal_handle, 'GO_READY')
         self.go_ready()
 
-        self.set_target_class(-1)
+        self.set_target_class(-1)  # 타겟 해제
 
         if success:
             result.success = True

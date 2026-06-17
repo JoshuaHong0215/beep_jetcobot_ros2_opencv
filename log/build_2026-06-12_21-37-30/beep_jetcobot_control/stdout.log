@@ -1,0 +1,20 @@
+running egg_info
+writing ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/PKG-INFO
+writing dependency_links to ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/dependency_links.txt
+writing entry points to ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/entry_points.txt
+writing requirements to ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/requires.txt
+writing top-level names to ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/top_level.txt
+reading manifest file '../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/SOURCES.txt'
+writing manifest file '../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/SOURCES.txt'
+running build
+running build_py
+copying beep_jetcobot_control/yolo_detector.py -> /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/build/beep_jetcobot_control/build/lib/beep_jetcobot_control
+running install
+running install_lib
+copying /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/build/beep_jetcobot_control/build/lib/beep_jetcobot_control/yolo_detector.py -> /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/python3.12/site-packages/beep_jetcobot_control
+byte-compiling /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/python3.12/site-packages/beep_jetcobot_control/yolo_detector.py to yolo_detector.cpython-312.pyc
+running install_data
+running install_egg_info
+removing '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/python3.12/site-packages/beep_jetcobot_control-0.0.0-py3.12.egg-info' (and everything under it)
+Copying ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/python3.12/site-packages/beep_jetcobot_control-0.0.0-py3.12.egg-info
+running install_scripts

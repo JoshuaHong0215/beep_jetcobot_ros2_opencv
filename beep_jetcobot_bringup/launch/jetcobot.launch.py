@@ -32,6 +32,7 @@ def generate_launch_description():
             name='yolo_detector',
             output='screen',
         ),
+        
         Node(
             package='beep_jetcobot_control',
             executable='pick_place_action_server',

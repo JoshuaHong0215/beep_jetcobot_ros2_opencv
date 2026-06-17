@@ -32,10 +32,6 @@ _frame_lock   = threading.Lock()
 _clients      = set()
 _clients_lock = threading.Lock()
 
-# 화면 십자선 위치 (K principal point). YoloDetectorNode가 칼리브 로드 후 갱신.
-_cross_x = 320
-_cross_y = 240
-
 
 def _client_listener():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -78,8 +74,8 @@ def _stream_loop(get_dets_fn):
             cv2.putText(small, 'NOT DETECTED', (10, 30),
                         cv2.FONT_HERSHEY_DUPLEX, 0.7, (0, 0, 255), 2)
 
-        cv2.line(small, (_cross_x, 0),   (_cross_x, 480), (255, 255, 0), 1)
-        cv2.line(small, (0,   _cross_y), (640, _cross_y), (255, 255, 0), 1)
+        cv2.line(small, (320, 0),   (320, 480), (255, 255, 0), 1)
+        cv2.line(small, (0,   240), (640, 240), (255, 255, 0), 1)
 
         _, buf = cv2.imencode('.jpg', small, [cv2.IMWRITE_JPEG_QUALITY, 40])
         with _clients_lock:
@@ -103,14 +99,6 @@ class YoloDetectorNode(Node):
 
         self.K          = np.array(calib['camera_matrix']['data']).reshape(3, 3)
         self.dist_coeffs = np.array(calib['distortion_coefficients']['data'])
-
-        # K principal point을 수렴 목표점/화면 십자선 위치로 사용
-        self.cx_pp = float(self.K[0, 2])
-        self.cy_pp = float(self.K[1, 2])
-        global _cross_x, _cross_y
-        _cross_x = int(round(self.cx_pp))
-        _cross_y = int(round(self.cy_pp))
-        self.get_logger().info(f'십자선/수렴 기준 = ({self.cx_pp:.2f}, {self.cy_pp:.2f})')
 
         self.error_pub     = self.create_publisher(Float32MultiArray, '/marker_error',    10)
         self.detection_pub = self.create_publisher(Float32MultiArray, '/yolo_detection',  10)
@@ -207,10 +195,10 @@ class YoloDetectorNode(Node):
         bbox_w = x2 - x1
         bbox_h = y2 - y1
 
-        pt      = np.array([[[cx, cy]]], dtype=np.float32)
-        undist  = cv2.undistortPoints(pt, self.K, self.dist_coeffs, P=self.K)
-        e_x     = float(undist[0][0][0]) - self.cx_pp
-        e_y     = float(undist[0][0][1]) - self.cy_pp
+        pt   = np.array([[[cx, cy]]], dtype=np.float32)
+        norm = cv2.undistortPoints(pt, self.K, self.dist_coeffs)
+        e_x  = float(norm[0][0][0])
+        e_y  = float(norm[0][0][1])
 
         class_id = float(CLASS_IDS.get(best['class'], -1))
         conf     = float(best['confidence'])
