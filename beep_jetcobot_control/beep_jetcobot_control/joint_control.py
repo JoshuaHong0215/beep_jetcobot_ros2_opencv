@@ -45,6 +45,13 @@ class JointControlNode(Node):
             10
             )
 
+        self.create_subscription(
+            Float32MultiArray,
+            '/single_joint_command',
+            self.single_joint_cb,
+            10
+        )
+
         self.joint_pub = self.create_publisher(
             JointState,
             'joint_states', 
@@ -103,6 +110,12 @@ class JointControlNode(Node):
         coords = list(msg.data)
         if len(coords) == 6:
             self.mc.send_coords(coords, self.speed, 1)
+
+    def single_joint_cb(self, msg):
+        if len(msg.data) == 2:
+            joint_id = int(msg.data[0])
+            angle = float(msg.data[1])
+            self.mc.send_angle(joint_id, angle, self.speed)
 
 
     def gripper_command_cb(self, msg):
