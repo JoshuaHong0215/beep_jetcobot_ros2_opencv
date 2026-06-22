@@ -52,6 +52,13 @@ class JointControlNode(Node):
             10
         )
 
+        self.create_subscription(
+            Float32MultiArray,
+            '/joint_limit',
+            self.joint_limit_cb,
+            10
+        )
+
         self.joint_pub = self.create_publisher(
             JointState,
             'joint_states', 
@@ -63,7 +70,13 @@ class JointControlNode(Node):
             '/ee_coords',
             10
         )
-        
+
+        self.ee_angles_pub = self.create_publisher(
+            Float32MultiArray,
+            '/ee_angles',
+            10
+        )
+
         self.timer = self.create_timer(0.1, self.timer_callback)
         self.get_logger().info('jetcobot 관절 제어 노드가 켜졌습니다')
 
@@ -85,6 +98,10 @@ class JointControlNode(Node):
         else:
             return
         self.joint_pub.publish(msg)
+
+        angles_msg = Float32MultiArray()
+        angles_msg.data = [float(a) for a in angles]
+        self.ee_angles_pub.publish(angles_msg)
 
 
         coords = self.mc.get_coords()
@@ -108,14 +125,30 @@ class JointControlNode(Node):
 
     def servo_command_cb(self, msg):
         coords = list(msg.data)
+        self.get_logger().info(f'>>> servo_cb 진입: coords={[round(c,1) for c in coords]}')
         if len(coords) == 6:
-            self.mc.send_coords(coords, self.speed, 1)
+            ret = self.mc.send_coords(coords, self.speed, 1)
+            self.get_logger().info(f'>>> mc.send_coords mode=1 반환: {ret}')
 
     def single_joint_cb(self, msg):
         if len(msg.data) == 2:
             joint_id = int(msg.data[0])
             angle = float(msg.data[1])
             self.mc.send_angle(joint_id, angle, self.speed)
+
+    def joint_limit_cb(self, msg):
+        # msg.data = [joint_id, min_deg, max_deg]
+        if len(msg.data) != 3:
+            return
+        jid = int(msg.data[0])
+        mn  = float(msg.data[1])
+        mx  = float(msg.data[2])
+        try:
+            self.mc.set_joint_min(jid, mn)
+            self.mc.set_joint_max(jid, mx)
+            self.get_logger().info(f'>>> J{jid} 제한 설정: [{mn:.1f}, {mx:.1f}]')
+        except Exception as e:
+            self.get_logger().warn(f'joint_limit 적용 실패: {e}')
 
 
     def gripper_command_cb(self, msg):

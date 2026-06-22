@@ -39,6 +39,8 @@ setup(
             'pick_place_ver2 = beep_jetcobot_control.pick_place_ver2:main',
             'pick_place_action_server = beep_jetcobot_control.pick_place_action_server:main',
             'pick_place_action_server_ver = beep_jetcobot_control.pick_place_action_server_ver:main',
+            'pick_place_action_server_ver3 = beep_jetcobot_control.pick_place_action_server_ver3:main',
+            'pick_place_action_server_ver4 = beep_jetcobot_control.pick_place_action_server_ver4:main',
             'yolo_detector = beep_jetcobot_control.yolo_detector:main',
         ],
     },

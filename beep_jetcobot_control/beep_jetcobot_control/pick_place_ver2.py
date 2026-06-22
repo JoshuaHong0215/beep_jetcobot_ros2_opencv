@@ -15,8 +15,8 @@ LIFT_Z    = 317.1  # 픽 후 복귀 높이 (ready 높이)
 
 # 카메라-TCP 오프셋 (카메라 정렬 후 TCP를 물체 위로 이동)
 # 부호는 실제 방향 확인 후 조정 필요 (+/-60.0)
-CAM_TCP_X = 90
-CAM_TCP_Y = 0.0
+CAM_TCP_X = 100
+CAM_TCP_Y = 20.0
 
 
 class PickPlaceVer2Node(Node):
@@ -159,7 +159,14 @@ class PickPlaceVer2Node(Node):
         return True
 
     def run(self):
-        time.sleep(1.0)
+        while rclpy.ok() and (
+            self.coord_pub.get_subscription_count() == 0
+            or self.gripper_pub.get_subscription_count() == 0
+        ):
+            self.get_logger().info('joint_control 대기...')
+            time.sleep(0.2)
+
+        time.sleep(0.5)
         self.open_gripper()
         self.go_ready()
         self.marker_error = None

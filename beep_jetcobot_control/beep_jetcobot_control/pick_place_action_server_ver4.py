@@ -7,7 +7,6 @@ from std_msgs.msg import Float32MultiArray, Int32
 from sensor_msgs.msg import JointState
 from ament_index_python.packages import get_package_share_directory
 import numpy as np
-from scipy.spatial.transform import Rotation as R
 import yaml
 import os
 import math
@@ -15,36 +14,39 @@ import time
 
 from beep_jetcobot_msgs.action import PickPlace
 
-# visual servo: e_x, e_y는 yolo_detector가 publish하는 픽셀 단위.
-# LAMBDA는 mm/픽셀 게인 (1픽셀당 robot이 몇 mm 움직일지).
-# THRESHOLD는 픽셀 단위 수렴 기준.
-LAMBDA    = 0.8    # mm/pixel
+# visual servo 파라미터 (ver3 동일)
+LAMBDA    = 0.3    # mm/pixel
 THRESHOLD = 16.0   # pixel
-MAX_ITER  = 100
-MAX_DELTA = 3.0    # mm/iter
+MAX_ITER  = 50
+MAX_DELTA = 15.0   # mm/iter
 
 PICK_Z = 120.1
 LIFT_Z = 317.1
 
-CAM_TCP_X = 75
+CAM_TCP_X = 90
 CAM_TCP_Y = 0.0
-CAM_TCP_Z = 30
 
 PLACE_ANGLES = [-84.99, -48.86, -23.81, -8.87, -1.05, -36.91]
+
+# J1 제한: 원점(0°) 기준 좌우 30도. picking 동안 IK 다중해 영역 차단용.
+J1_LIMIT_MIN     = -30.0
+J1_LIMIT_MAX     =  30.0
+# 제한 해제 시 펌웨어 기본값
+J1_DEFAULT_MIN   = -170.0
+J1_DEFAULT_MAX   =  170.0
 
 TASK_CLASS = {'0': 0, '1': 1, '2': 2}
 CLASS_NAME = {0: 'large_blue_box', 1: 'medium_red_box', 2: 'small_yellow_box'}
 
 
-class PickPlaceActionServer(Node):
+class PickPlaceActionServerVer4(Node):
     def __init__(self):
         super().__init__('pick_place_action_server')
 
         self.home_angles  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        self.ready_angles = [-0.96, 19.51, -25.22, -63.63, 1.05, -47.19]
+        self.ready_coords = [129.1, -62.8, 317.1, -162.04, -18.67, -42.35]
         self.speed        = 30
 
-        # 십자선 기준점 (camera_cali의 principal point)
         config_path = os.path.join(
             get_package_share_directory('beep_jetcobot_control'),
             'config', 'camera_cali.yaml'
@@ -59,14 +61,16 @@ class PickPlaceActionServer(Node):
         self.marker_error   = None
         self.ee_coords      = None
         self.current_angles = None
-        self.target_class   = None  # 현재 task에서 잡을 class id
+        self.target_class   = None
 
         cb = ReentrantCallbackGroup()
 
-        self.joint_pub   = self.create_publisher(Float32MultiArray, '/joint_command',   10)
-        self.coord_pub   = self.create_publisher(Float32MultiArray, '/coord_command',   10)
-        self.servo_pub   = self.create_publisher(Float32MultiArray, '/coord_servo',     10)
-        self.gripper_pub = self.create_publisher(Int32,             '/gripper_command', 10)
+        self.joint_pub       = self.create_publisher(Float32MultiArray, '/joint_command',  10)
+        self.coord_pub       = self.create_publisher(Float32MultiArray, '/coord_command',  10)
+        self.servo_pub       = self.create_publisher(Float32MultiArray, '/coord_servo',    10)
+        self.gripper_pub     = self.create_publisher(Int32,             '/gripper_command',10)
+        # /joint_limit: [joint_id, min_deg, max_deg]
+        self.joint_limit_pub = self.create_publisher(Float32MultiArray, '/joint_limit',    10)
 
         self.create_subscription(Float32MultiArray, '/detection',    self.detection_cb,   10, callback_group=cb)
         self.create_subscription(Float32MultiArray, '/ee_coords',    self.ee_coords_cb,   10, callback_group=cb)
@@ -82,10 +86,9 @@ class PickPlaceActionServer(Node):
             callback_group=cb,
         )
 
-        self.get_logger().info('pick_place_action_server 시작')
+        self.get_logger().info('pick_place_action_server_ver4 시작')
 
     def detection_cb(self, msg):
-        # msg.data = [class_id, cx, cy, w, h, conf]
         if len(msg.data) < 6:
             return
         class_id, cx, cy, _, _, _ = msg.data[:6]
@@ -99,7 +102,6 @@ class PickPlaceActionServer(Node):
         self.ee_coords = list(msg.data)
 
     def joint_state_cb(self, msg):
-        # joint_control이 rad로 publish → deg로 변환
         if len(msg.position) == 6:
             self.current_angles = [math.degrees(p) for p in msg.position]
 
@@ -132,6 +134,12 @@ class PickPlaceActionServer(Node):
         msg.data = value
         self.gripper_pub.publish(msg)
 
+    def set_joint_limit(self, joint_id, mn, mx):
+        msg = Float32MultiArray()
+        msg.data = [float(joint_id), float(mn), float(mx)]
+        self.joint_limit_pub.publish(msg)
+        self.get_logger().info(f'>>> joint_limit J{joint_id}: [{mn:.1f}, {mx:.1f}]')
+        time.sleep(0.3)
 
     # ── helpers ──────────────────────────────────────────────────
     def get_fresh_error(self):
@@ -159,7 +167,7 @@ class PickPlaceActionServer(Node):
         time.sleep(5)
 
     def go_ready(self):
-        self.send_angles(self.ready_angles)
+        self.send_coords(self.ready_coords)
         time.sleep(4)
 
     def open_gripper(self):
@@ -167,7 +175,6 @@ class PickPlaceActionServer(Node):
         time.sleep(2)
 
     def visual_servo(self, goal_handle):
-        # 진입 시 자세각 한 번만 캡처 — 이후 모든 servo iter에서 이 값 고정 사용
         init_coords = self.ee_coords
         if init_coords is None:
             return False
@@ -197,7 +204,6 @@ class PickPlaceActionServer(Node):
 
             cur_x, cur_y, cur_z = coords[0], coords[1], coords[2]
 
-            # 픽셀 → mm 직접 변환. 축 매핑: Robot +X ↔ e_y, Robot +Y ↔ e_x (카메라 ~90° 회전).
             delta_x = max(-MAX_DELTA, min(MAX_DELTA, -LAMBDA * e_y))
             delta_y = max(-MAX_DELTA, min(MAX_DELTA, -LAMBDA * e_x))
 
@@ -214,20 +220,10 @@ class PickPlaceActionServer(Node):
         if coords is None:
             return False
 
+        x  = coords[0] + CAM_TCP_X
+        y  = coords[1] + CAM_TCP_Y
+        z  = coords[2]
         rx, ry, rz = coords[3], coords[4], coords[5]
-
-        # EE frame 기준 카메라→TCP offset을 자세각으로 회전시켜 robot frame 변위로 변환
-        offset_ee = np.array([CAM_TCP_X, CAM_TCP_Y, CAM_TCP_Z])
-        rot = R.from_euler('xyz', [rx, ry, rz], degrees=True)
-        dx, dy, dz = rot.apply(offset_ee)
-
-        self.get_logger().info(
-            f'>>> rpy=({rx:.1f}, {ry:.1f}, {rz:.1f})  offset_robot=(dx={dx:.1f}, dy={dy:.1f}, dz={dz:.1f})'
-        )
-
-        x = coords[0] + dx
-        y = coords[1] + dy
-        z = coords[2] + dz
 
         self.publish_feedback(goal_handle, 'TCP_ALIGN')
         self.get_logger().info(f'>>> TCP_ALIGN: ({x:.1f}, {y:.1f}, {z:.1f})')
@@ -281,15 +277,20 @@ class PickPlaceActionServer(Node):
         self.target_class = class_id
 
         self.open_gripper()
-        self.go_home()              # IK 일관성 위해 매 시도마다 영점부터 시작
+        self.go_home()
         self.publish_feedback(goal_handle, 'GO_READY')
         self.go_ready()
+
+        # picking 영역만 IK 풀 수 있게 J1 제한 ON
+        self.set_joint_limit(1, J1_LIMIT_MIN, J1_LIMIT_MAX)
 
         self.marker_error = None
         converged = self.visual_servo(goal_handle)
 
         if not converged:
             self.publish_feedback(goal_handle, 'SERVO_FAILED')
+            # 제한 풀고 복귀
+            self.set_joint_limit(1, J1_DEFAULT_MIN, J1_DEFAULT_MAX)
             self.go_home()
             self.target_class = None
             result.success = False
@@ -297,8 +298,11 @@ class PickPlaceActionServer(Node):
             goal_handle.abort()
             return result
 
-        time.sleep(0.5)  # 교차 후 정지
+        time.sleep(0.5)
         success = self.pick(goal_handle)
+
+        # pick 끝났으면 J1 제한 해제 (place 가야 함)
+        self.set_joint_limit(1, J1_DEFAULT_MIN, J1_DEFAULT_MAX)
 
         if success:
             self.publish_feedback(goal_handle, 'GO_READY')
@@ -324,7 +328,7 @@ class PickPlaceActionServer(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = PickPlaceActionServer()
+    node = PickPlaceActionServerVer4()
     executor = MultiThreadedExecutor()
     executor.add_node(node)
     try:

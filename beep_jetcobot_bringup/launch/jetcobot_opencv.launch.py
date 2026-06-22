@@ -20,23 +20,15 @@ def generate_launch_description():
             output='screen',
         ),
         Node(
-            package='robot_state_publisher',
-            executable='robot_state_publisher',
-            name='robot_state_publisher',
+            package='beep_jetcobot_control',
+            executable='pick_place_ver2',
+            name='pick_place_ver2',
             output='screen',
-            parameters=[{'robot_description': robot_description}],
         ),
         Node(
             package='beep_jetcobot_control',
-            executable='yolo_detector',
-            name='yolo_detector',
-            output='screen',
-        ),
-        
-        Node(
-            package='beep_jetcobot_control',
-            executable='pick_place_action_server_ver3',
-            name='pick_place_action_server_ver3',
+            executable='contour_detector',
+            name='contour_detector',
             output='screen',
         ),
     ])

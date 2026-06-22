@@ -1,0 +1,9 @@
+[0.000000] (-) TimerEvent: {}
+[0.001125] (-) JobUnselected: {'identifier': 'beep_jetcobot_bringup'}
+[0.002270] (-) JobUnselected: {'identifier': 'beep_jetcobot_description'}
+[0.002868] (-) JobUnselected: {'identifier': 'beep_jetcobot_moveit_config'}
+[0.002961] (-) JobUnselected: {'identifier': 'beep_jetcobot_msgs'}
+[0.003821] (beep_jetcobot_control) JobQueued: {'identifier': 'beep_jetcobot_control', 'dependencies': OrderedDict({'beep_jetcobot_msgs': '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_msgs'})}
+[0.004047] (beep_jetcobot_control) JobStarted: {'identifier': 'beep_jetcobot_control'}
+[0.056880] (beep_jetcobot_control) JobEnded: {'identifier': 'beep_jetcobot_control', 'rc': 1}
+[0.071138] (-) EventReactorShutdown: {}
