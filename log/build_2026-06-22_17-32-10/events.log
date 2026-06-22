@@ -1,0 +1,149 @@
+[0.000000] (-) TimerEvent: {}
+[0.000974] (-) JobUnselected: {'identifier': 'beep_jetcobot_bringup'}
+[0.001927] (-) JobUnselected: {'identifier': 'beep_jetcobot_description'}
+[0.002444] (-) JobUnselected: {'identifier': 'beep_jetcobot_moveit_config'}
+[0.003218] (-) JobUnselected: {'identifier': 'beep_jetcobot_msgs'}
+[0.003382] (beep_jetcobot_control) JobQueued: {'identifier': 'beep_jetcobot_control', 'dependencies': OrderedDict({'beep_jetcobot_msgs': '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_msgs'})}
+[0.003611] (beep_jetcobot_control) JobStarted: {'identifier': 'beep_jetcobot_control'}
+[0.099178] (-) TimerEvent: {}
+[0.199965] (-) TimerEvent: {}
+[0.300564] (-) TimerEvent: {}
+[0.401250] (-) TimerEvent: {}
+[0.501990] (-) TimerEvent: {}
+[0.602656] (-) TimerEvent: {}
+[0.703266] (-) TimerEvent: {}
+[0.803994] (-) TimerEvent: {}
+[0.904741] (-) TimerEvent: {}
+[1.005347] (-) TimerEvent: {}
+[1.106028] (-) TimerEvent: {}
+[1.206759] (-) TimerEvent: {}
+[1.307363] (-) TimerEvent: {}
+[1.408000] (-) TimerEvent: {}
+[1.508797] (-) TimerEvent: {}
+[1.634331] (-) TimerEvent: {}
+[1.737723] (-) TimerEvent: {}
+[1.838393] (-) TimerEvent: {}
+[1.939015] (-) TimerEvent: {}
+[2.039909] (-) TimerEvent: {}
+[2.140901] (-) TimerEvent: {}
+[2.241669] (-) TimerEvent: {}
+[2.342309] (-) TimerEvent: {}
+[2.443061] (-) TimerEvent: {}
+[2.543697] (-) TimerEvent: {}
+[2.644288] (-) TimerEvent: {}
+[2.744917] (-) TimerEvent: {}
+[2.845538] (-) TimerEvent: {}
+[2.946176] (-) TimerEvent: {}
+[3.046832] (-) TimerEvent: {}
+[3.147451] (-) TimerEvent: {}
+[3.248104] (-) TimerEvent: {}
+[3.348897] (-) TimerEvent: {}
+[3.449530] (-) TimerEvent: {}
+[3.550244] (-) TimerEvent: {}
+[3.650931] (-) TimerEvent: {}
+[3.751666] (-) TimerEvent: {}
+[3.852287] (-) TimerEvent: {}
+[3.953807] (-) TimerEvent: {}
+[4.054960] (-) TimerEvent: {}
+[4.155636] (-) TimerEvent: {}
+[4.256218] (-) TimerEvent: {}
+[4.356836] (-) TimerEvent: {}
+[4.457463] (-) TimerEvent: {}
+[4.558139] (-) TimerEvent: {}
+[4.658961] (-) TimerEvent: {}
+[4.759644] (-) TimerEvent: {}
+[4.860322] (-) TimerEvent: {}
+[4.961030] (-) TimerEvent: {}
+[5.061688] (-) TimerEvent: {}
+[5.162280] (-) TimerEvent: {}
+[5.262934] (-) TimerEvent: {}
+[5.363628] (-) TimerEvent: {}
+[5.464212] (-) TimerEvent: {}
+[5.564846] (-) TimerEvent: {}
+[5.665454] (-) TimerEvent: {}
+[5.766049] (-) TimerEvent: {}
+[5.866681] (-) TimerEvent: {}
+[5.967296] (-) TimerEvent: {}
+[6.067974] (-) TimerEvent: {}
+[6.168920] (-) TimerEvent: {}
+[6.270122] (-) TimerEvent: {}
+[6.370898] (-) TimerEvent: {}
+[6.471523] (-) TimerEvent: {}
+[6.572223] (-) TimerEvent: {}
+[6.673473] (-) TimerEvent: {}
+[6.712804] (beep_jetcobot_control) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../build/beep_jetcobot_control', 'build', '--build-base', '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/build/beep_jetcobot_control/build', 'install', '--record', '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/build/beep_jetcobot_control/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/beep_jetcobot_control', 'env': {'PYTHON_BASIC_REPL': '1', 'LESSOPEN': '| /usr/bin/lesspipe %s', 'GZ_SIM_RESOURCE_PATH': '/opt/ros/jazzy/share', 'USER': 'jetcobot', 'SSH_CLIENT': '100.92.176.12 58344 22', 'GZ_CONFIG_PATH': '/opt/ros/jazzy/opt/gz_sim_vendor/share/gz:/opt/ros/jazzy/opt/sdformat_vendor/share/gz:/opt/ros/jazzy/opt/gz_gui_vendor/share/gz:/opt/ros/jazzy/opt/gz_transport_vendor/share/gz:/opt/ros/jazzy/opt/gz_rendering_vendor/share/gz:/opt/ros/jazzy/opt/gz_plugin_vendor/share/gz:/opt/ros/jazzy/opt/gz_fuel_tools_vendor/share/gz:/opt/ros/jazzy/opt/gz_msgs_vendor/share/gz:/opt/ros/jazzy/opt/gz_common_vendor/share/gz', 'XDG_SESSION_TYPE': 'tty', 'GIT_ASKPASS': '/home/jetcobot/.vscode-server/cli/servers/Stable-034f571df509819cc10b0c8129f66ef77a542f0e/server/extensions/git/dist/askpass.sh', 'SHLVL': '2', 'LD_LIBRARY_PATH': '/home/jetcobot/jetcobot_ws/install/mypalletizer_interfaces/lib:/home/jetcobot/jetcobot_ws/install/mycobot_pro450_interfaces/lib:/home/jetcobot/jetcobot_ws/install/mycobot_interfaces/lib:/home/jetcobot/jetcobot_ws/install/mecharm_interfaces/lib:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_msgs/lib:/opt/ros/jazzy/opt/gz_sim_vendor/lib:/opt/ros/jazzy/opt/gz_sensors_vendor/lib:/opt/ros/jazzy/opt/gz_physics_vendor/lib:/opt/ros/jazzy/opt/sdformat_vendor/lib:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/aarch64-linux-gnu:/opt/ros/jazzy/opt/gz_gui_vendor/lib:/opt/ros/jazzy/opt/gz_transport_vendor/lib:/opt/ros/jazzy/opt/gz_rendering_vendor/lib:/opt/ros/jazzy/opt/gz_plugin_vendor/lib:/opt/ros/jazzy/opt/gz_fuel_tools_vendor/lib:/opt/ros/jazzy/opt/gz_msgs_vendor/lib:/opt/ros/jazzy/opt/gz_common_vendor/lib:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_tools_vendor/lib:/opt/ros/jazzy/opt/gz_ogre_next_vendor/lib:/opt/ros/jazzy/opt/gz_dartsim_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'BROWSER': '/home/jetcobot/.vscode-server/cli/servers/Stable-034f571df509819cc10b0c8129f66ef77a542f0e/server/bin/helpers/browser.sh', 'HOME': '/home/jetcobot', 'OLDPWD': '/home/jetcobot/jetcobot_ws', 'TERM_PROGRAM_VERSION': '1.118.1', 'VSCODE_IPC_HOOK_CLI': '/run/user/1002/vscode-ipc-3e06eec6-4c8e-410d-a103-b92cb4b0d879.sock', 'ROS_PYTHON_VERSION': '3', 'VSCODE_GIT_ASKPASS_MAIN': '/home/jetcobot/.vscode-server/cli/servers/Stable-034f571df509819cc10b0c8129f66ef77a542f0e/server/extensions/git/dist/askpass-main.js', 'VSCODE_GIT_ASKPASS_NODE': '/home/jetcobot/.vscode-server/cli/servers/Stable-034f571df509819cc10b0c8129f66ef77a542f0e/server/node', 'PYDEVD_DISABLE_FILE_VALIDATION': '1', 'BUNDLED_DEBUGPY_PATH': '/home/jetcobot/.vscode-server/extensions/ms-python.debugpy-2026.6.0-linux-arm64/bundled/libs/debugpy', 'VSCODE_PYTHON_AUTOACTIVATE_GUARD': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1002/bus', 'COLORTERM': 'truecolor', 'DEBUGINFOD_URLS': 'https://debuginfod.ubuntu.com', 'COLCON_PREFIX_PATH': '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install:/home/jetcobot/jetcobot_ws/install', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'jetcobot', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'CLAUDE_CODE_SSE_PORT': '42745', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '19', 'PATH': '/home/jetcobot/.vscode-server/data/User/globalStorage/github.copilot-chat/debugCommand:/home/jetcobot/.vscode-server/data/User/globalStorage/github.copilot-chat/copilotCli:/home/jetcobot/.vscode-server/cli/servers/Stable-034f571df509819cc10b0c8129f66ef77a542f0e/server/bin/remote-cli:/home/jetcobot/.local/bin:/opt/ros/jazzy/opt/gz_msgs_vendor/bin:/opt/ros/jazzy/opt/gz_tools_vendor/bin:/opt/ros/jazzy/opt/gz_ogre_next_vendor/bin:/opt/ros/jazzy/bin:/home/jetcobot/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/jetcobot/.vscode-server/extensions/ms-python.debugpy-2026.6.0-linux-arm64/bundled/scripts/noConfigScripts', 'XDG_RUNTIME_DIR': '/run/user/1002', 'DISPLAY': ':1', 'VSCODE_DEBUGPY_ADAPTER_ENDPOINTS': '/home/jetcobot/.vscode-server/extensions/ms-python.debugpy-2026.6.0-linux-arm64/.noConfigDebugAdapterEndpoints/endpoint-d5adfb5bca79dea7.txt', 'LANG': 'en_US.UTF-8', 'PYTHONSTARTUP': '/home/jetcobot/.vscode-server/data/User/workspaceStorage/0feda32edfa900d94171b5a9f1e01a46/ms-python.python/pythonrc.py', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'VSCODE_GIT_IPC_HANDLE': '/run/user/1002/vscode-git-453b56965d.sock', 'TERM_PROGRAM': 'vscode', 'ROS_DOMAIN_ID': '3', 'AMENT_PREFIX_PATH': '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control:/home/jetcobot/jetcobot_ws/install/ultraarm:/home/jetcobot/jetcobot_ws/install/pro450_moveit2_control:/home/jetcobot/jetcobot_ws/install/pro450_moveit2:/home/jetcobot/jetcobot_ws/install/mypalletizer_communication:/home/jetcobot/jetcobot_ws/install/mypalletizer_interfaces:/home/jetcobot/jetcobot_ws/install/mypalletizer_260_pi:/home/jetcobot/jetcobot_ws/install/mypalletizer_260:/home/jetcobot/jetcobot_ws/install/mycobot_pro_450:/home/jetcobot/jetcobot_ws/install/mycobot_pro450_interfaces:/home/jetcobot/jetcobot_ws/install/myarm_m750:/home/jetcobot/jetcobot_ws/install/myarm_c650:/home/jetcobot/jetcobot_ws/install/mycobot_communication:/home/jetcobot/jetcobot_ws/install/mecharm_communication:/home/jetcobot/jetcobot_ws/install/mycobot_interfaces:/home/jetcobot/jetcobot_ws/install/mycobot_630_moveit2:/home/jetcobot/jetcobot_ws/install/mycobot_630:/home/jetcobot/jetcobot_ws/install/mycobot_600:/home/jetcobot/jetcobot_ws/install/mycobot_320pi:/home/jetcobot/jetcobot_ws/install/mycobot_320_riscv:/home/jetcobot/jetcobot_ws/install/mycobot_320:/home/jetcobot/jetcobot_ws/install/mycobot_280rdkx5_moveit2:/home/jetcobot/jetcobot_ws/install/mycobot_280pi:/home/jetcobot/jetcobot_ws/install/mycobot_280jn:/home/jetcobot/jetcobot_ws/install/mycobot_280arduino_moveit2:/home/jetcobot/jetcobot_ws/install/mycobot_280_x3pi:/home/jetcobot/jetcobot_ws/install/mycobot_280_riscv:/home/jetcobot/jetcobot_ws/install/mycobot_280_rdkx5:/home/jetcobot/jetcobot_ws/install/mycobot_280_moveit2_control:/home/jetcobot/jetcobot_ws/install/mycobot_280_moveit2:/home/jetcobot/jetcobot_ws/install/mycobot_280_arduino:/home/jetcobot/jetcobot_ws/install/mycobot_280:/home/jetcobot/jetcobot_ws/install/mybuddy:/home/jetcobot/jetcobot_ws/install/myarm_300:/home/jetcobot/jetcobot_ws/install/mecharm_pi:/home/jetcobot/jetcobot_ws/install/mecharm:/home/jetcobot/jetcobot_ws/install/mycobot_description:/home/jetcobot/jetcobot_ws/install/mecharm_interfaces:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_bringup:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_control:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_msgs:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_moveit_config:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_description:/opt/ros/jazzy', 'SHELL': '/bin/bash', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'VSCODE_GIT_ASKPASS_EXTRA_ARGS': '', 'PWD': '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/build/beep_jetcobot_control', 'LC_ALL': 'en_US.UTF-8', 'SSH_CONNECTION': '100.92.176.12 58344 100.89.39.118 22', 'XDG_DATA_DIRS': '/usr/share/gnome:/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/build/beep_jetcobot_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/ultraarm/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/pro450_moveit2_control/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mypalletizer_communication/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mypalletizer_interfaces/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mypalletizer_260_pi/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mypalletizer_260/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_pro_450/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_pro450_interfaces/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/myarm_m750/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/myarm_c650/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_communication/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mecharm_communication/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_interfaces/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_630/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_600/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_320pi/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_320_riscv/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_320/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_280pi/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_280jn/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_280_x3pi/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_280_riscv/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_280_rdkx5/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_280_moveit2_control/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_280_arduino/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_280/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mybuddy/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/myarm_300/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mecharm_pi/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mecharm/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mycobot_description/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/mecharm_interfaces/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_bringup/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_control/lib/python3.12/site-packages:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_msgs/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'COLCON': '1', 'CMAKE_PREFIX_PATH': '/home/jetcobot/jetcobot_ws/install/pro450_moveit2:/home/jetcobot/jetcobot_ws/install/mypalletizer_interfaces:/home/jetcobot/jetcobot_ws/install/mycobot_pro450_interfaces:/home/jetcobot/jetcobot_ws/install/mycobot_interfaces:/home/jetcobot/jetcobot_ws/install/mycobot_630_moveit2:/home/jetcobot/jetcobot_ws/install/mycobot_280rdkx5_moveit2:/home/jetcobot/jetcobot_ws/install/mycobot_280arduino_moveit2:/home/jetcobot/jetcobot_ws/install/mycobot_280_moveit2:/home/jetcobot/jetcobot_ws/install/mecharm_interfaces:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_msgs:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_moveit_config:/home/jetcobot/jetcobot_ws/install/beep_jetcobot_description:/opt/ros/jazzy/opt/gz_sim_vendor:/opt/ros/jazzy/opt/gz_sensors_vendor:/opt/ros/jazzy/opt/gz_physics_vendor:/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_gui_vendor:/opt/ros/jazzy/opt/gz_transport_vendor:/opt/ros/jazzy/opt/gz_rendering_vendor:/opt/ros/jazzy/opt/gz_plugin_vendor:/opt/ros/jazzy/opt/gz_fuel_tools_vendor:/opt/ros/jazzy/opt/gz_msgs_vendor:/opt/ros/jazzy/opt/gz_common_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_ogre_next_vendor:/opt/ros/jazzy/opt/gz_dartsim_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor'}, 'shell': False}
+[6.773574] (-) TimerEvent: {}
+[6.874165] (-) TimerEvent: {}
+[6.974799] (-) TimerEvent: {}
+[7.075519] (-) TimerEvent: {}
+[7.176182] (-) TimerEvent: {}
+[7.276926] (-) TimerEvent: {}
+[7.377600] (-) TimerEvent: {}
+[7.478253] (-) TimerEvent: {}
+[7.578882] (-) TimerEvent: {}
+[7.679523] (-) TimerEvent: {}
+[7.780193] (-) TimerEvent: {}
+[7.880836] (-) TimerEvent: {}
+[7.981509] (-) TimerEvent: {}
+[8.082227] (-) TimerEvent: {}
+[8.182895] (-) TimerEvent: {}
+[8.283524] (-) TimerEvent: {}
+[8.384116] (-) TimerEvent: {}
+[8.484773] (-) TimerEvent: {}
+[8.585368] (-) TimerEvent: {}
+[8.641209] (beep_jetcobot_control) StdoutLine: {'line': b'running egg_info\n'}
+[8.685523] (-) TimerEvent: {}
+[8.786120] (-) TimerEvent: {}
+[8.789521] (beep_jetcobot_control) StdoutLine: {'line': b'writing ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/PKG-INFO\n'}
+[8.793265] (beep_jetcobot_control) StdoutLine: {'line': b'writing dependency_links to ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/dependency_links.txt\n'}
+[8.794905] (beep_jetcobot_control) StdoutLine: {'line': b'writing entry points to ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/entry_points.txt\n'}
+[8.795925] (beep_jetcobot_control) StdoutLine: {'line': b'writing requirements to ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/requires.txt\n'}
+[8.796765] (beep_jetcobot_control) StdoutLine: {'line': b'writing top-level names to ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/top_level.txt\n'}
+[8.886266] (-) TimerEvent: {}
+[8.986943] (-) TimerEvent: {}
+[9.087530] (-) TimerEvent: {}
+[9.114795] (beep_jetcobot_control) StdoutLine: {'line': b"reading manifest file '../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/SOURCES.txt'\n"}
+[9.122155] (beep_jetcobot_control) StdoutLine: {'line': b"writing manifest file '../build/beep_jetcobot_control/beep_jetcobot_control.egg-info/SOURCES.txt'\n"}
+[9.122999] (beep_jetcobot_control) StdoutLine: {'line': b'running build\n'}
+[9.123636] (beep_jetcobot_control) StdoutLine: {'line': b'running build_py\n'}
+[9.129367] (beep_jetcobot_control) StdoutLine: {'line': b'running install\n'}
+[9.157838] (beep_jetcobot_control) StdoutLine: {'line': b'running install_lib\n'}
+[9.187682] (-) TimerEvent: {}
+[9.288257] (-) TimerEvent: {}
+[9.318665] (beep_jetcobot_control) StdoutLine: {'line': b'running install_data\n'}
+[9.321141] (beep_jetcobot_control) StdoutLine: {'line': b'running install_egg_info\n'}
+[9.388459] (-) TimerEvent: {}
+[9.479280] (beep_jetcobot_control) StdoutLine: {'line': b"removing '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/python3.12/site-packages/beep_jetcobot_control-0.0.0-py3.12.egg-info' (and everything under it)\n"}
+[9.481657] (beep_jetcobot_control) StdoutLine: {'line': b'Copying ../build/beep_jetcobot_control/beep_jetcobot_control.egg-info to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/python3.12/site-packages/beep_jetcobot_control-0.0.0-py3.12.egg-info\n'}
+[9.488582] (-) TimerEvent: {}
+[9.492814] (beep_jetcobot_control) StdoutLine: {'line': b'running install_scripts\n'}
+[9.588726] (-) TimerEvent: {}
+[9.689332] (-) TimerEvent: {}
+[9.789982] (-) TimerEvent: {}
+[9.890617] (-) TimerEvent: {}
+[9.991218] (-) TimerEvent: {}
+[10.091841] (-) TimerEvent: {}
+[10.192456] (-) TimerEvent: {}
+[10.293055] (-) TimerEvent: {}
+[10.393748] (-) TimerEvent: {}
+[10.494347] (-) TimerEvent: {}
+[10.536728] (beep_jetcobot_control) StdoutLine: {'line': b'Installing aruco_detector script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.540145] (beep_jetcobot_control) StdoutLine: {'line': b'Installing contour_detector script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.541168] (beep_jetcobot_control) StdoutLine: {'line': b'Installing handeye_tf_publisher script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.542755] (beep_jetcobot_control) StdoutLine: {'line': b'Installing joint_control script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.543746] (beep_jetcobot_control) StdoutLine: {'line': b'Installing pick_place script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.545904] (beep_jetcobot_control) StdoutLine: {'line': b'Installing pick_place_action_server script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.547199] (beep_jetcobot_control) StdoutLine: {'line': b'Installing pick_place_action_server_ver script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.548471] (beep_jetcobot_control) StdoutLine: {'line': b'Installing pick_place_action_server_ver3 script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.549571] (beep_jetcobot_control) StdoutLine: {'line': b'Installing pick_place_action_server_ver4 script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.550830] (beep_jetcobot_control) StdoutLine: {'line': b'Installing pick_place_angle script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.552158] (beep_jetcobot_control) StdoutLine: {'line': b'Installing pick_place_tf script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.553515] (beep_jetcobot_control) StdoutLine: {'line': b'Installing pick_place_ver2 script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.554886] (beep_jetcobot_control) StdoutLine: {'line': b'Installing yolo_detector script to /home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/install/beep_jetcobot_control/lib/beep_jetcobot_control\n'}
+[10.561100] (beep_jetcobot_control) StdoutLine: {'line': b"writing list of installed files to '/home/jetcobot/jetcobot_ws/src/beep_jetcobot_ros2/build/beep_jetcobot_control/install.log'\n"}
+[10.594729] (-) TimerEvent: {}
+[10.695959] (-) TimerEvent: {}
+[10.734781] (beep_jetcobot_control) CommandEnded: {'returncode': 0}
+[10.796457] (-) TimerEvent: {}
+[10.815681] (beep_jetcobot_control) JobEnded: {'identifier': 'beep_jetcobot_control', 'rc': 0}
+[10.818794] (-) EventReactorShutdown: {}

@@ -166,24 +166,23 @@ class YoloDetectorNode(Node):
         if not dets:
             return
 
-        # 모든 detection 발행: 필터링은 pick_place 쪽에서.
-        # 단순화를 위해 가장 confidence 높은 한 개만 보냄.
-        best = max(dets, key=lambda d: d['confidence'])
-        x1, y1, x2, y2 = best['bbox']
-        cx = (x1 + x2) / 2.0
-        cy = (y1 + y2) / 2.0
-        w  = x2 - x1
-        h  = y2 - y1
-        class_id = float(CLASS_IDS.get(best['class'], -1))
-        conf     = float(best['confidence'])
+        # 모든 detection 발행: 필터링은 pick_place 쪽에서 target_class로.
+        for det in dets:
+            x1, y1, x2, y2 = det['bbox']
+            cx = (x1 + x2) / 2.0
+            cy = (y1 + y2) / 2.0
+            w  = x2 - x1
+            h  = y2 - y1
+            class_id = float(CLASS_IDS.get(det['class'], -1))
+            conf     = float(det['confidence'])
 
-        msg      = Float32MultiArray()
-        msg.data = [class_id, float(cx), float(cy), float(w), float(h), conf]
-        self.detection_pub.publish(msg)
+            msg      = Float32MultiArray()
+            msg.data = [class_id, float(cx), float(cy), float(w), float(h), conf]
+            self.detection_pub.publish(msg)
 
-        self.get_logger().info(
-            f'{best["class"]}({conf:.2f}) | 중점({cx:.0f},{cy:.0f}) | bbox {w:.0f}x{h:.0f}'
-        )
+            self.get_logger().info(
+                f'{det["class"]}({conf:.2f}) | 중점({cx:.0f},{cy:.0f}) | bbox {w:.0f}x{h:.0f}'
+            )
 
     def destroy_node(self):
         self.cap.release()

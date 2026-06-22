@@ -12,6 +12,9 @@ beep_jetcobot_control/__init__.py
 beep_jetcobot_control/contour_detector.py
 beep_jetcobot_control/joint_control.py
 beep_jetcobot_control/pick_place_action_server.py
+beep_jetcobot_control/pick_place_action_server_ver.py
+beep_jetcobot_control/pick_place_action_server_ver3.py
+beep_jetcobot_control/pick_place_action_server_ver4.py
 beep_jetcobot_control/pick_place_ver2.py
 beep_jetcobot_control/yolo_detector.py
 config/camera_cali.yaml

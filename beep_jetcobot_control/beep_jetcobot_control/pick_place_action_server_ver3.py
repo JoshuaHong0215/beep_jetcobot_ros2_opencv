@@ -26,7 +26,8 @@ LIFT_Z = 317.1
 
 # 옛날 ready pose 자세각 기준 CAM-TCP offset (robot +X 방향, 회전 변환 없음)
 CAM_TCP_X = 120
-CAM_TCP_Y = 10.0
+# 값이 작아질수록 robot base 기준 왼쪽으로 이동
+CAM_TCP_Y = 5.0
 
 PLACE_ANGLES = [-84.99, -48.86, -23.81, -8.87, -1.05, -36.91]
 

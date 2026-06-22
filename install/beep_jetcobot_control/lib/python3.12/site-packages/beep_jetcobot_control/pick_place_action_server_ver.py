@@ -7,7 +7,6 @@ from std_msgs.msg import Float32MultiArray, Int32
 from sensor_msgs.msg import JointState
 from ament_index_python.packages import get_package_share_directory
 import numpy as np
-from scipy.spatial.transform import Rotation as R
 import yaml
 import os
 import math
@@ -18,17 +17,16 @@ from beep_jetcobot_msgs.action import PickPlace
 # visual servo: e_x, e_y는 yolo_detector가 publish하는 픽셀 단위.
 # LAMBDA는 mm/픽셀 게인 (1픽셀당 robot이 몇 mm 움직일지).
 # THRESHOLD는 픽셀 단위 수렴 기준.
-LAMBDA    = 0.8    # mm/pixel
+LAMBDA    = 0.3    # mm/pixel
 THRESHOLD = 16.0   # pixel
 MAX_ITER  = 100
-MAX_DELTA = 3.0    # mm/iter
+MAX_DELTA = 8.0    # mm/iter
 
 PICK_Z = 120.1
 LIFT_Z = 317.1
 
-CAM_TCP_X = 75
+CAM_TCP_X = 30
 CAM_TCP_Y = 0.0
-CAM_TCP_Z = 30
 
 PLACE_ANGLES = [-84.99, -48.86, -23.81, -8.87, -1.05, -36.91]
 
@@ -41,7 +39,9 @@ class PickPlaceActionServer(Node):
         super().__init__('pick_place_action_server')
 
         self.home_angles  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        self.ready_angles = [-0.96, 19.51, -25.22, -63.63, 1.05, -47.19]
+        # 되는거 [129.1, -62.8, 317.1, -162.04, -18.67, -42.35]
+        # 안 되는거[119.9, -64.4, 284.9, -176.46, -2.05, -41.5]
+        self.ready_coords = [129.1, -62.8, 317.1, -162.04, -18.67, -42.35]
         self.speed        = 30
 
         # 십자선 기준점 (camera_cali의 principal point)
@@ -159,7 +159,7 @@ class PickPlaceActionServer(Node):
         time.sleep(5)
 
     def go_ready(self):
-        self.send_angles(self.ready_angles)
+        self.send_coords(self.ready_coords)
         time.sleep(4)
 
     def open_gripper(self):
@@ -167,13 +167,6 @@ class PickPlaceActionServer(Node):
         time.sleep(2)
 
     def visual_servo(self, goal_handle):
-        # 진입 시 자세각 한 번만 캡처 — 이후 모든 servo iter에서 이 값 고정 사용
-        init_coords = self.ee_coords
-        if init_coords is None:
-            return False
-        ready_rx, ready_ry, ready_rz = init_coords[3], init_coords[4], init_coords[5]
-        self.get_logger().info(f'>>> servo 시작 자세각 고정: rpy=({ready_rx:.1f}, {ready_ry:.1f}, {ready_rz:.1f})')
-
         for i in range(MAX_ITER):
             if goal_handle.is_cancel_requested:
                 return False
@@ -196,6 +189,7 @@ class PickPlaceActionServer(Node):
                 continue
 
             cur_x, cur_y, cur_z = coords[0], coords[1], coords[2]
+            rx, ry, rz          = coords[3], coords[4], coords[5]
 
             # 픽셀 → mm 직접 변환. 축 매핑: Robot +X ↔ e_y, Robot +Y ↔ e_x (카메라 ~90° 회전).
             delta_x = max(-MAX_DELTA, min(MAX_DELTA, -LAMBDA * e_y))
@@ -204,7 +198,7 @@ class PickPlaceActionServer(Node):
             self.get_logger().info(
                 f'  → delta=({delta_x:+.2f}, {delta_y:+.2f}) mm  cur=({cur_x:.1f}, {cur_y:.1f})'
             )
-            self.send_coords([cur_x + delta_x, cur_y + delta_y, cur_z, ready_rx, ready_ry, ready_rz])
+            self.send_servo_coords([cur_x + delta_x, cur_y + delta_y, cur_z, rx, ry, rz])
             time.sleep(0.5)
 
         return False
@@ -214,20 +208,10 @@ class PickPlaceActionServer(Node):
         if coords is None:
             return False
 
+        x  = coords[0] + CAM_TCP_X
+        y  = coords[1] + CAM_TCP_Y
+        z  = coords[2]
         rx, ry, rz = coords[3], coords[4], coords[5]
-
-        # EE frame 기준 카메라→TCP offset을 자세각으로 회전시켜 robot frame 변위로 변환
-        offset_ee = np.array([CAM_TCP_X, CAM_TCP_Y, CAM_TCP_Z])
-        rot = R.from_euler('xyz', [rx, ry, rz], degrees=True)
-        dx, dy, dz = rot.apply(offset_ee)
-
-        self.get_logger().info(
-            f'>>> rpy=({rx:.1f}, {ry:.1f}, {rz:.1f})  offset_robot=(dx={dx:.1f}, dy={dy:.1f}, dz={dz:.1f})'
-        )
-
-        x = coords[0] + dx
-        y = coords[1] + dy
-        z = coords[2] + dz
 
         self.publish_feedback(goal_handle, 'TCP_ALIGN')
         self.get_logger().info(f'>>> TCP_ALIGN: ({x:.1f}, {y:.1f}, {z:.1f})')
