@@ -1,8 +1,0 @@
-Metadata-Version: 2.1
-Name: beep-jetcobot-control
-Version: 0.0.0
-Summary: JetCobot control and vision nodes
-Maintainer: jetcobot
-Maintainer-email: sebin5736@gmail.com
-License: TODO: License declaration
-Provides-Extra: test

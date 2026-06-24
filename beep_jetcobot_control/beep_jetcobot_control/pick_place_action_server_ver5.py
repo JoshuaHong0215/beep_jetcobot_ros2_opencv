@@ -1,3 +1,7 @@
+# ver5: mode 분기
+# - mode 0: work → storage (기존)
+# - mode 1: storage → loading (J1 -90도 회전)
+
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
@@ -7,7 +11,6 @@ from std_msgs.msg import Float32MultiArray, Int32
 from sensor_msgs.msg import JointState
 from ament_index_python.packages import get_package_share_directory
 import numpy as np
-from scipy.spatial.transform import Rotation as R
 import yaml
 import os
 import math
@@ -15,36 +18,54 @@ import time
 
 from beep_jetcobot_msgs.action import PickPlace
 
-# visual servo: e_x, e_y는 yolo_detector가 publish하는 픽셀 단위.
-# LAMBDA는 mm/픽셀 게인 (1픽셀당 robot이 몇 mm 움직일지).
-# THRESHOLD는 픽셀 단위 수렴 기준.
-LAMBDA    = 0.8    # mm/pixel
-THRESHOLD = 16.0   # pixel
-MAX_ITER  = 100
-MAX_DELTA = 3.0    # mm/iter
+# visual servo 파라미터
+LAMBDA    = 0.3
+THRESHOLD = 16.0
+MAX_ITER  = 50
+MAX_DELTA = 15.0
 
-PICK_Z = 120.1
-LIFT_Z = 317.1
+LIFT_Z = 317.1     # 공통 ready 높이
 
-CAM_TCP_X = 75
-CAM_TCP_Y = 0.0
-CAM_TCP_Z = 30
+# mode 0: work → storage
+# CAM_TCP: 카메라 정렬 후 그리퍼를 박스 위로 이동할 오프셋 (base 프레임)
+CAM_TCP_X_WORK       = 120
+CAM_TCP_Y_WORK       = 5.0
+PICK_Z_WORK          = 120.1
+Z_MIN_WORK           = 100.0     # work 영역 안전 클램프 (지면 기준)
+PLACE_ANGLES_STORAGE = [-84.99, -48.86, -23.81, -8.87, -1.05, -36.91]
 
-PLACE_ANGLES = [-84.99, -48.86, -23.81, -8.87, -1.05, -36.91]
+# mode 1: storage → loading (J1을 -90° 돌린 자세 기준)
+# work 오프셋(120, 5)을 -90° 회전한 값 ≈ (5, -120). 실측 후 조정 권장.
+CAM_TCP_X_STORAGE    = 10
+CAM_TCP_Y_STORAGE    = -100
+PICK_Z_STORAGE       = 180.0                                            # storage 표면 60mm + 그리퍼 길이 + 여유
+Z_MIN_STORAGE        = 180.0                                            # storage 영역 안전 클램프
+
+# loading zone = mode 0의 작업 영역. ready 위치 XY에 work z 높이로 떨어뜨림.
+LOADING_X            = 129.1
+LOADING_Y            = -62.8
+LOADING_Z            = 120.1
+LOADING_RX           = -162.04
+LOADING_RY           = -18.67
+LOADING_RZ           = -42.35
+J1_OFFSET_STORAGE    = -90.0                                            # 베이스 기준 우측 90도. 반대면 +90.0
+PLACE_ANGLES_LOADING = [-84.99, -48.86, -23.81, -8.87, -1.05, -36.91]   # TODO: 측정
 
 TASK_CLASS = {'0': 0, '1': 1, '2': 2}
 CLASS_NAME = {0: 'large_blue_box', 1: 'medium_red_box', 2: 'small_yellow_box'}
 
+MODE_WORK_TO_STORAGE    = 0
+MODE_STORAGE_TO_LOADING = 1
 
-class PickPlaceActionServer(Node):
+
+class PickPlaceActionServerVer5(Node):
     def __init__(self):
         super().__init__('pick_place_action_server')
 
         self.home_angles  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        self.ready_angles = [-0.96, 19.51, -25.22, -63.63, 1.05, -47.19]
+        self.ready_coords = [129.1, -62.8, 317.1, -162.04, -18.67, -42.35]
         self.speed        = 30
 
-        # 십자선 기준점 (camera_cali의 principal point)
         config_path = os.path.join(
             get_package_share_directory('beep_jetcobot_control'),
             'config', 'camera_cali.yaml'
@@ -59,7 +80,8 @@ class PickPlaceActionServer(Node):
         self.marker_error   = None
         self.ee_coords      = None
         self.current_angles = None
-        self.target_class   = None  # 현재 task에서 잡을 class id
+        self.target_class   = None
+        self.z_min          = Z_MIN_WORK   # 현재 모드별 z 하한 (execute_cb에서 설정)
 
         cb = ReentrantCallbackGroup()
 
@@ -82,10 +104,9 @@ class PickPlaceActionServer(Node):
             callback_group=cb,
         )
 
-        self.get_logger().info('pick_place_action_server 시작')
+        self.get_logger().info('pick_place_action_server_ver5 시작')
 
     def detection_cb(self, msg):
-        # msg.data = [class_id, cx, cy, w, h, conf]
         if len(msg.data) < 6:
             return
         class_id, cx, cy, _, _, _ = msg.data[:6]
@@ -99,12 +120,13 @@ class PickPlaceActionServer(Node):
         self.ee_coords = list(msg.data)
 
     def joint_state_cb(self, msg):
-        # joint_control이 rad로 publish → deg로 변환
         if len(msg.position) == 6:
             self.current_angles = [math.degrees(p) for p in msg.position]
 
     def goal_cb(self, goal_request):
-        self.get_logger().info(f'Goal 수신: task_id={goal_request.task_id}')
+        self.get_logger().info(
+            f'Goal 수신: task_id={goal_request.task_id} mode={goal_request.mode}'
+        )
         return GoalResponse.ACCEPT
 
     def cancel_cb(self, goal_handle):
@@ -118,6 +140,10 @@ class PickPlaceActionServer(Node):
         self.joint_pub.publish(msg)
 
     def send_coords(self, coords):
+        coords = list(coords)
+        if coords[2] < self.z_min:
+            self.get_logger().warn(f'z={coords[2]:.1f} < z_min={self.z_min} — 클램프')
+            coords[2] = self.z_min
         msg = Float32MultiArray()
         msg.data = [float(c) for c in coords]
         self.coord_pub.publish(msg)
@@ -131,7 +157,6 @@ class PickPlaceActionServer(Node):
         msg = Int32()
         msg.data = value
         self.gripper_pub.publish(msg)
-
 
     # ── helpers ──────────────────────────────────────────────────
     def get_fresh_error(self):
@@ -159,15 +184,28 @@ class PickPlaceActionServer(Node):
         time.sleep(5)
 
     def go_ready(self):
-        self.send_angles(self.ready_angles)
+        self.send_coords(self.ready_coords)
         time.sleep(4)
 
     def open_gripper(self):
         self.send_gripper(100)
         time.sleep(2)
 
-    def visual_servo(self, goal_handle):
-        # 진입 시 자세각 한 번만 캡처 — 이후 모든 servo iter에서 이 값 고정 사용
+    def rotate_j1_from_ready(self, j1_offset_deg):
+        """work ready 자세에서 J1만 offset만큼 추가 회전."""
+        if abs(j1_offset_deg) < 1e-3:
+            return True
+        if self.current_angles is None:
+            self.get_logger().error('current_angles 없음 — 회전 불가')
+            return False
+        target = list(self.current_angles)
+        target[0] += j1_offset_deg
+        self.get_logger().info(f'>>> J1 회전: {self.current_angles[0]:.1f} → {target[0]:.1f}')
+        self.send_angles(target)
+        time.sleep(4)
+        return True
+
+    def visual_servo(self, goal_handle, mode):
         init_coords = self.ee_coords
         if init_coords is None:
             return False
@@ -197,9 +235,19 @@ class PickPlaceActionServer(Node):
 
             cur_x, cur_y, cur_z = coords[0], coords[1], coords[2]
 
-            # 픽셀 → mm 직접 변환. 축 매핑: Robot +X ↔ e_y, Robot +Y ↔ e_x (카메라 ~90° 회전).
-            delta_x = max(-MAX_DELTA, min(MAX_DELTA, -LAMBDA * e_y))
-            delta_y = max(-MAX_DELTA, min(MAX_DELTA, -LAMBDA * e_x))
+            # mode별 축 매핑
+            if mode == MODE_WORK_TO_STORAGE:
+                # work: 카메라 ~90도 회전. Robot +X ↔ -e_y, Robot +Y ↔ -e_x
+                delta_x = -LAMBDA * e_y
+                delta_y = -LAMBDA * e_x
+            else:  # MODE_STORAGE_TO_LOADING
+                # storage: work에서 J1 -90도 추가 회전한 상태.
+                # Robot +X ↔ -e_x, Robot +Y ↔ +e_y
+                delta_x = -LAMBDA * e_x
+                delta_y = +LAMBDA * e_y
+
+            delta_x = max(-MAX_DELTA, min(MAX_DELTA, delta_x))
+            delta_y = max(-MAX_DELTA, min(MAX_DELTA, delta_y))
 
             self.get_logger().info(
                 f'  → delta=({delta_x:+.2f}, {delta_y:+.2f}) mm  cur=({cur_x:.1f}, {cur_y:.1f})'
@@ -209,25 +257,15 @@ class PickPlaceActionServer(Node):
 
         return False
 
-    def pick(self, goal_handle):
+    def pick(self, goal_handle, pick_z, cam_tcp_x, cam_tcp_y):
         coords = self.ee_coords
         if coords is None:
             return False
 
+        x  = coords[0] + cam_tcp_x
+        y  = coords[1] + cam_tcp_y
+        z  = coords[2]
         rx, ry, rz = coords[3], coords[4], coords[5]
-
-        # EE frame 기준 카메라→TCP offset을 자세각으로 회전시켜 robot frame 변위로 변환
-        offset_ee = np.array([CAM_TCP_X, CAM_TCP_Y, CAM_TCP_Z])
-        rot = R.from_euler('xyz', [rx, ry, rz], degrees=True)
-        dx, dy, dz = rot.apply(offset_ee)
-
-        self.get_logger().info(
-            f'>>> rpy=({rx:.1f}, {ry:.1f}, {rz:.1f})  offset_robot=(dx={dx:.1f}, dy={dy:.1f}, dz={dz:.1f})'
-        )
-
-        x = coords[0] + dx
-        y = coords[1] + dy
-        z = coords[2] + dz
 
         self.publish_feedback(goal_handle, 'TCP_ALIGN')
         self.get_logger().info(f'>>> TCP_ALIGN: ({x:.1f}, {y:.1f}, {z:.1f})')
@@ -235,8 +273,8 @@ class PickPlaceActionServer(Node):
         time.sleep(3)
 
         self.publish_feedback(goal_handle, 'DESCEND')
-        self.get_logger().info(f'>>> DESCEND: ({x:.1f}, {y:.1f}, {PICK_Z:.1f})')
-        self.send_coords([x, y, PICK_Z, rx, ry, rz])
+        self.get_logger().info(f'>>> DESCEND: ({x:.1f}, {y:.1f}, {pick_z:.1f})')
+        self.send_coords([x, y, pick_z, rx, ry, rz])
         time.sleep(3)
 
         self.publish_feedback(goal_handle, 'GRIP')
@@ -249,10 +287,10 @@ class PickPlaceActionServer(Node):
 
         return True
 
-    def place(self, goal_handle):
+    def place_at_angles(self, goal_handle, place_angles):
         self.publish_feedback(goal_handle, 'PLACE_MOVE')
-        self.get_logger().info(f'>>> PLACE: angles={PLACE_ANGLES}')
-        self.send_angles(PLACE_ANGLES)
+        self.get_logger().info(f'>>> PLACE: angles={place_angles}')
+        self.send_angles(place_angles)
         time.sleep(5)
 
         self.publish_feedback(goal_handle, 'RELEASE')
@@ -261,15 +299,41 @@ class PickPlaceActionServer(Node):
 
         return True
 
+    def place_at_coords(self, goal_handle, x, y, descend_z, rx, ry, rz):
+        # 1) 목표 위 LIFT_Z 높이로 이동
+        self.publish_feedback(goal_handle, 'PLACE_MOVE')
+        self.get_logger().info(f'>>> PLACE_MOVE: ({x:.1f}, {y:.1f}, {LIFT_Z:.1f})')
+        self.send_coords([x, y, LIFT_Z, rx, ry, rz])
+        time.sleep(4)
+
+        # 2) descend
+        self.publish_feedback(goal_handle, 'DESCEND')
+        self.get_logger().info(f'>>> DESCEND: ({x:.1f}, {y:.1f}, {descend_z:.1f})')
+        self.send_coords([x, y, descend_z, rx, ry, rz])
+        time.sleep(3)
+
+        # 3) release
+        self.publish_feedback(goal_handle, 'RELEASE')
+        self.send_gripper(100)
+        time.sleep(1.5)
+
+        # 4) lift
+        self.publish_feedback(goal_handle, 'LIFT')
+        self.send_coords([x, y, LIFT_Z, rx, ry, rz])
+        time.sleep(3)
+
+        return True
+
     # ── execute ──────────────────────────────────────────────────
     def execute_cb(self, goal_handle):
         self.get_logger().info('태스크 실행 시작')
         result = PickPlace.Result()
 
-        task_id    = goal_handle.request.task_id
-        class_id   = TASK_CLASS.get(task_id, -1)
-        class_name = CLASS_NAME.get(class_id, '알 수 없음')
+        task_id = goal_handle.request.task_id
+        mode    = int(goal_handle.request.mode)
 
+        # 검증
+        class_id = TASK_CLASS.get(task_id, -1)
         if class_id == -1:
             self.get_logger().error(f'유효하지 않은 task_id: {task_id}')
             result.success = False
@@ -277,16 +341,55 @@ class PickPlaceActionServer(Node):
             goal_handle.abort()
             return result
 
-        self.get_logger().info(f'타겟 클래스: {class_name} (id={class_id})')
+        if mode not in (MODE_WORK_TO_STORAGE, MODE_STORAGE_TO_LOADING):
+            self.get_logger().error(f'유효하지 않은 mode: {mode}')
+            result.success = False
+            result.message = f'유효하지 않은 mode: {mode} (0=work→storage, 1=storage→loading)'
+            goal_handle.abort()
+            return result
+
+        # mode별 파라미터
+        if mode == MODE_WORK_TO_STORAGE:
+            pick_z       = PICK_Z_WORK
+            cam_tcp_x    = CAM_TCP_X_WORK
+            cam_tcp_y    = CAM_TCP_Y_WORK
+            j1_offset    = 0.0
+            self.z_min   = Z_MIN_WORK
+            place_angles = PLACE_ANGLES_STORAGE
+        else:
+            pick_z       = PICK_Z_STORAGE
+            cam_tcp_x    = CAM_TCP_X_STORAGE
+            cam_tcp_y    = CAM_TCP_Y_STORAGE
+            j1_offset    = J1_OFFSET_STORAGE
+            self.z_min   = Z_MIN_STORAGE
+            place_angles = PLACE_ANGLES_LOADING
+
+        class_name = CLASS_NAME.get(class_id, '알 수 없음')
+        self.get_logger().info(
+            f'타겟: {class_name}(id={class_id}) | mode={mode} | '
+            f'pick_z={pick_z} | cam_tcp=({cam_tcp_x},{cam_tcp_y}) | '
+            f'j1_offset={j1_offset} | z_min={self.z_min}'
+        )
         self.target_class = class_id
 
         self.open_gripper()
-        self.go_home()              # IK 일관성 위해 매 시도마다 영점부터 시작
+        self.go_home()
+
+        # 1) work ready
         self.publish_feedback(goal_handle, 'GO_READY')
         self.go_ready()
 
+        # 2) mode 1이면 J1 -90도 회전
+        if not self.rotate_j1_from_ready(j1_offset):
+            self.target_class = None
+            result.success = False
+            result.message = 'J1 회전 실패'
+            goal_handle.abort()
+            return result
+
+        # 3) visual servo
         self.marker_error = None
-        converged = self.visual_servo(goal_handle)
+        converged = self.visual_servo(goal_handle, mode)
 
         if not converged:
             self.publish_feedback(goal_handle, 'SERVO_FAILED')
@@ -297,14 +400,28 @@ class PickPlaceActionServer(Node):
             goal_handle.abort()
             return result
 
-        time.sleep(0.5)  # 교차 후 정지
-        success = self.pick(goal_handle)
+        # 4) pick
+        time.sleep(0.5)
+        success = self.pick(goal_handle, pick_z, cam_tcp_x, cam_tcp_y)
 
+        # 5) place
         if success:
-            self.publish_feedback(goal_handle, 'GO_READY')
-            self.go_ready()
-            self.place(goal_handle)
+            if mode == MODE_WORK_TO_STORAGE:
+                self.place_at_angles(goal_handle, place_angles)
+            else:
+                # mode 1: 살짝 들어올린 뒤 work ready 거쳐서 loading zone에 떨어뜨림
+                c = self.ee_coords
+                self.send_coords([c[0], c[1], c[2] + 70, c[3], c[4], c[5]])
+                time.sleep(2)
+                self.z_min = Z_MIN_WORK
+                self.go_ready()
+                self.place_at_coords(
+                    goal_handle,
+                    LOADING_X, LOADING_Y, LOADING_Z,
+                    LOADING_RX, LOADING_RY, LOADING_RZ,
+                )
 
+        # 6) work ready 복귀
         self.publish_feedback(goal_handle, 'GO_READY')
         self.go_ready()
 
@@ -312,7 +429,7 @@ class PickPlaceActionServer(Node):
 
         if success:
             result.success = True
-            result.message = f'{class_name} 피킹/플레이스 완료'
+            result.message = f'{class_name} mode={mode} 완료'
             goal_handle.succeed()
         else:
             result.success = False
@@ -324,7 +441,7 @@ class PickPlaceActionServer(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = PickPlaceActionServer()
+    node = PickPlaceActionServerVer5()
     executor = MultiThreadedExecutor()
     executor.add_node(node)
     try:

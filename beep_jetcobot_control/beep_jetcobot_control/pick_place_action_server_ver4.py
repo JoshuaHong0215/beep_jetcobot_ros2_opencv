@@ -1,3 +1,6 @@
+# J1의 관절 제한
+
+
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
@@ -23,8 +26,8 @@ MAX_DELTA = 15.0   # mm/iter
 PICK_Z = 120.1
 LIFT_Z = 317.1
 
-CAM_TCP_X = 90
-CAM_TCP_Y = 0.0
+CAM_TCP_X = 120
+CAM_TCP_Y = 5.0
 
 PLACE_ANGLES = [-84.99, -48.86, -23.81, -8.87, -1.05, -36.91]
 
