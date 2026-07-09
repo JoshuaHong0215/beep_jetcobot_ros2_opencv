@@ -34,7 +34,7 @@ MyCobot 280 Pi (Jetcobot)
 | `beep_jetcobot_bringup` | 런치 파일 모음 (`jetcobot_opencv.launch.py` 등) |
 | `beep_jetcobot_control` | 비전(Contour 인식) + 제어(Pick & Place, 관절 제어) 노드 |
 | `beep_jetcobot_description` | MyCobot 280 Pi URDF |
-| `beep_jetcobot_moveit_config` | MoveIt 설정 (참고용) |
+| `beep_jetcobot_moveit_config` | MoveIt 설정 (현재 파이프라인에선 미사용) |
 | `beep_jetcobot_msgs` | 커스텀 액션 정의 (`PickPlace.action`, 현재 파이프라인에선 미사용) |
 
 ## 노드 상세
@@ -78,11 +78,6 @@ source install/setup.bash
 ros2 launch beep_jetcobot_bringup jetcobot_opencv.launch.py
 ```
 
-## 알려진 한계 / 트러블슈팅
-
-- **조명 변화에 취약**: 조도가 바뀌면 Contour 인식이 끊기는 현상이 반복 발생 → 조명을 차단한 환경에서는 증상이 완화되는 것을 확인, 실환경 조명 변화에 대한 강건성이 부족함을 확인. 이 한계가 이후 [YOLO 기반 버전](https://github.com/JoshuaHong0215/beep_jetcobot_ros2_yolo)으로 전환한 직접적인 계기였습니다.
-- **Principal Point 오차**: 초기에는 이미지 중심(320, 240 기준 좌표)을 카메라 중심으로 가정했으나, 실제 캘리브레이션 결과 Principal Point가 (356.7, 195.2)에 있음을 확인 → 기준점을 캘리브레이션 값으로 수정해 정렬 오차의 근본 원인을 제거
-- Depth Camera 부재로 정밀한 Hand-Eye Calibration이 어려워, Z축은 지면까지의 고정 높이를 가정한 값(`PICK_Z`)으로 제한
 
 ## 관련 저장소
 
